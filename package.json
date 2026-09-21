@@ -1,0 +1,30 @@
+{
+  "name": "for-the-greater-good",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test:browser": "node scripts/verify.mjs",
+    "format": "prettier --write src scripts package.json vite.config.js index.html"
+  },
+  "dependencies": {
+    "@fontsource/anton": "^5.2.6",
+    "@fontsource/dm-sans": "^5.2.6",
+    "@fontsource/ibm-plex-mono": "^5.2.6",
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.3.0",
+    "lucide-react": "^0.468.0",
+    "react": "~19.2.0",
+    "react-dom": "~19.2.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@vitejs/plugin-react": "^5.0.3",
+    "prettier": "^3.9.8",
+    "vite": "^7.1.5"
+  }
+}
