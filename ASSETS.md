@@ -29,3 +29,27 @@ Generated files were copied from the tool's default generated-images directory i
 - Identity and role supplied by the user: Andrew Tai, Managing Director at Synapze.
 - Usage: portrait face of the interactive alumni record sleeve. CSS fits the original portrait into the square sleeve.
 - Profile link: `https://www.linkedin.com/in/andrewtaiwc/`, verified against the link on [Synapze's team page](https://www.synapzemy.com/about).
+
+## Supplied Brand Artwork
+
+- File: `public/assets/brand-board.jpeg`, copied unchanged from the supplied `WhatsApp Image 2026-09-29 at 14.19.19.jpeg`.
+- Selected design: bottom-left orange crescent and charcoal speech mark, with its original wordmark.
+- Display: `BrandLogo.jsx` uses SVG viewports `24 218 176 151` (complete lockup) and `56 218 102 102` (mark only) over the original 662 x 427 bitmap. An SVG display filter keys out the white background so the mark sits over the fog. The source bitmap is unchanged; no generated replacement is used.
+- `public/favicon.svg` is a small code-native vector interpretation of the selected mark for the browser tab.
+- Font reference: the second supplied screenshot identifies Perpetua Titling MT, Light. The actual font file is pending; no commercial font has been downloaded or redistributed.
+- The loading record is original code-native SVG geometry using the logo's orange and charcoal palette.
+
+## Procedural Materials
+
+- Paper micrograin, brushed-metal roughness, record grooves, and printed centre labels are generated locally with canvas in `RecordScene.jsx`.
+- The 3D turntable, sleeves, lighting, and contact shadows use code-native Three.js geometry and materials; no remote models or texture services are required.
+- The loading disc uses the live projected platter bounds for its exit transition. The original supplied logo and portrait files remain unchanged.
+
+## Supplied First-Roundtable Photographs
+
+- `public/assets/roundtable-01.jpeg`: user-supplied `Work 1.jpeg`, opening conversation around the table.
+- `public/assets/roundtable-02.jpeg`: user-supplied `work 2.jpeg`, a participant speaking while others listen.
+- `public/assets/roundtable-03.jpeg`: user-supplied `work 3.jpeg`, a wider view of the discussion.
+- `public/assets/roundtable-04.jpeg`: user-supplied `work 4.jpeg`, group photograph outside the Synapze office.
+- All files are copied unchanged from the user's Desktop. Display order begins with the group photograph. CSS preserves the full natural aspect ratios; the lightbox offers zoom for closer inspection.
+- Captions do not identify individual participants or infer their roles. These photographs belong to the first conversation, not the upcoming AI edition.

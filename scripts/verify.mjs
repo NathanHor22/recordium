@@ -38,6 +38,9 @@ page.on("console", (message) => {
 
 async function rendered() {
   await page.locator(".world-canvas canvas").waitFor();
+  await expect(page.locator(".vinyl-loader")).toHaveCount(0, {
+    timeout: 16000,
+  });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(2900);
 }
@@ -144,8 +147,9 @@ async function containedRectangularControls() {
       ".catalogue-record",
       ".room-record-switch button",
       ".track > button",
-      ".statement-next .button",
-      ".curator-link",
+      ".editorial-story-button",
+      ".registration-action",
+      ".registration-close",
       ".alumni-back-footer a",
       ".room-close",
     ];
@@ -210,6 +214,30 @@ async function scrollPortal(progress) {
 async function screenshot(name) {
   await page.screenshot({ path: `${output}/${name}.png` });
 }
+async function verifyRegistrationPlaceholder() {
+  const dialog = page.locator(".registration-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("open", "");
+  await expect(dialog).toContainText("opening soon");
+  await expect(dialog).toContainText("The Work After AI");
+  await expect(
+    dialog.locator("form, input, textarea, select, a[href]"),
+  ).toHaveCount(0);
+  const close = dialog.getByRole("button", {
+    name: "Close invitation details",
+    exact: true,
+  });
+  const back = dialog.getByRole("button", {
+    name: "Back to browsing",
+    exact: true,
+  });
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(back).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await containedRectangularControls();
+}
 async function verifyAlumni(name, checkLink = false) {
   const front = page.getByRole("button", {
     name: "Show details about Andrew Tai",
@@ -260,7 +288,7 @@ async function verifyAlumni(name, checkLink = false) {
   await expect(front).toHaveAttribute("aria-expanded", "false");
 }
 async function verifyStatement(name) {
-  await page.locator(".story-statement").evaluate((element) => {
+  await page.locator(".editorial-invitation").evaluate((element) => {
     const top = element.getBoundingClientRect().top + scrollY;
     scrollTo({
       top: top + element.offsetHeight - innerHeight,
@@ -269,7 +297,7 @@ async function verifyStatement(name) {
   });
   await page.waitForTimeout(1000);
   const request = page
-    .locator(".statement-next")
+    .locator(".editorial-invitation")
     .getByRole("button", { name: "Request an invitation", exact: true });
   await expect(request).toBeVisible();
   await expect(request).toBeInViewport();
@@ -277,15 +305,18 @@ async function verifyStatement(name) {
   await containedRectangularControls();
   await screenshot(`statement-${name}`);
   await request.click();
-  await expect(page.locator(".invitation-dialog")).toBeVisible();
+  await verifyRegistrationPlaceholder();
   await page.keyboard.press("Escape");
-  await expect(page.locator(".invitation-dialog")).toHaveCount(0);
+  await expect(page.locator(".registration-dialog")).toHaveCount(0);
   await expect(request).toBeFocused();
 }
 
 try {
   await page.goto(baseURL);
   await rendered();
+  await expect(
+    page.getByRole("link", { name: "Curator workspace", exact: true }),
+  ).toHaveCount(0);
   await expect(page.locator(".fog-background")).toHaveAttribute(
     "data-state",
     "live",
@@ -317,13 +348,13 @@ try {
   await page.waitForTimeout(500);
   expect((await pixels()).hash).not.toBe(movingA.hash);
   await page
-    .getByRole("button", { name: "Close edition", exact: true })
+    .getByRole("button", { name: "Copy conversation link", exact: true })
     .focus();
   await page.keyboard.press("Shift+Tab");
   await expect(page.locator(".room-record-switch button").last()).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("button", { name: "Close edition", exact: true }),
+    page.getByRole("button", { name: "Copy conversation link", exact: true }),
   ).toBeFocused();
   await page
     .getByRole("button", { name: "What work asks of us", exact: true })
@@ -345,15 +376,17 @@ try {
   await page
     .locator(".room-story")
     .getByRole("button", { name: "Request an invitation", exact: true })
+    .first()
     .click();
-  await expect(page.locator(".invitation-dialog")).toBeVisible();
+  await verifyRegistrationPlaceholder();
   await page.keyboard.press("Escape");
-  await expect(page.locator(".invitation-dialog")).toHaveCount(0);
+  await expect(page.locator(".registration-dialog")).toHaveCount(0);
   await expect(page.locator(".listening-room")).toBeVisible();
   await expect(
     page
       .locator(".room-story")
-      .getByRole("button", { name: "Request an invitation", exact: true }),
+      .getByRole("button", { name: "Request an invitation", exact: true })
+      .first(),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator(".listening-room")).toHaveCount(0);
@@ -406,31 +439,21 @@ try {
     "Collection zoom, restored scroll/focus, Andrew Tai portrait/LinkedIn/flip and statement CTA passed.",
   );
 
+  const storedRequests = await page.evaluate(() =>
+    localStorage.getItem("ftgg-applications-v1"),
+  );
   await page.locator(".header-request").click();
-  await page.getByLabel("Your name").fill("Prototype Test Applicant");
-  await page.getByLabel("Email address").fill("prototype.test@example.com");
+  await verifyRegistrationPlaceholder();
   await page
-    .getByLabel("Organisation", { exact: false })
-    .fill("Example Studio");
-  await page.getByLabel("Role", { exact: false }).fill("Founder");
-  await page
-    .getByLabel("What perspective would you bring?")
-    .fill(
-      "Building a small team and exploring how AI changes shared decisions.",
-    );
-  await page.getByRole("checkbox").check();
-  await page
-    .locator(".invitation-dialog")
-    .getByRole("button", { name: "Request an invitation", exact: true })
+    .getByRole("button", { name: "Back to browsing", exact: true })
     .click();
-  await expect(page.getByText("A place to begin.")).toBeVisible();
-  await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.locator(".header-request")).toBeFocused();
-  await page.getByRole("link", { name: "Curator workspace" }).click();
-  await page.getByLabel("Search applicants").fill("Prototype Test Applicant");
-  await page
-    .getByRole("button", { name: "Prototype Test Applicant", exact: true })
-    .click();
+  expect(
+    await page.evaluate(() => localStorage.getItem("ftgg-applications-v1")),
+  ).toBe(storedRequests);
+  await page.goto(new URL("#/admin", baseURL).href);
+  await page.getByLabel("Search applicants").fill("Amelia Tan");
+  await page.getByRole("button", { name: /^Amelia Tan\s*Sample$/ }).click();
   await page
     .getByLabel("Curator notes")
     .fill("Relevant experience for the room.");
@@ -443,9 +466,11 @@ try {
     .getByRole("button", { name: "Close applicant", exact: true })
     .click();
   await page.reload();
-  await page.getByLabel("Search applicants").fill("Prototype Test Applicant");
+  await page.getByLabel("Search applicants").fill("Amelia Tan");
   await expect(page.locator("tbody")).toContainText("Confirmed");
-  console.log("Invitation, curator workflow and persistence passed.");
+  console.log(
+    "Public registration placeholder, isolated curator workflow and persistence passed.",
+  );
 
   for (const viewport of [
     { width: 320, height: 700 },
@@ -547,11 +572,11 @@ try {
   await page.keyboard.press("Escape");
   await expect(page.locator(".listening-room")).toHaveCount(0);
   const reducedRequest = page
-    .locator(".statement-next")
+    .locator(".editorial-invitation")
     .getByRole("button", { name: "Request an invitation", exact: true });
   await reducedRequest.scrollIntoViewIfNeeded();
   await reducedRequest.click();
-  await expect(page.locator(".invitation-dialog")).toBeVisible();
+  await verifyRegistrationPlaceholder();
   await page.keyboard.press("Escape");
   await expect(reducedRequest).toBeFocused();
   expect(failures).toEqual([]);

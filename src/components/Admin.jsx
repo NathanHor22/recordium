@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import BrandLogo from "./BrandLogo";
 import {
   Disc3,
   Check,
@@ -403,7 +404,7 @@ export default function Admin({ onClose }) {
           <span>Collection</span>
         </button>
         <span className="admin-brand">
-          FOR THE GREATER GOOD<span> / CURATOR</span>
+          <BrandLogo compact /> <span>Curator workspace</span>
         </span>
         <span className="admin-demo-badge">Demo workspace</span>
       </header>

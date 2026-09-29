@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
-import Dialog from "./Dialog";
+import EventGallery from "./EventGallery";
 
 export default function EditionContent({ edition, onRequest }) {
   const [track, setTrack] = useState(0);
-  const [photo, setPhoto] = useState(null);
   const isAI = edition.id === "ai";
   return (
     <article className="room-edition-copy">
@@ -39,6 +38,14 @@ export default function EditionContent({ edition, onRequest }) {
           </button>
         )}
       </section>
+      {!isAI && edition.photos.length > 0 && (
+        <section className="story-block">
+          <EventGallery
+            photos={edition.photos}
+            title="Inside the first conversation"
+          />
+        </section>
+      )}
       <section className="story-block track-section">
         <div className="story-section-head">
           <span className="eyebrow">
@@ -106,22 +113,6 @@ export default function EditionContent({ edition, onRequest }) {
           </section>
         </>
       )}
-      {edition.photos.length > 0 && (
-        <section className="story-block">
-          <span className="eyebrow">INSIDE THE ROOM</span>
-          <div className="photo-grid">
-            {edition.photos.map((item, index) => (
-              <button
-                key={item.src}
-                onClick={() => setPhoto(index)}
-                aria-label={`Open photograph: ${item.alt}`}
-              >
-                <img src={item.src} alt={item.alt} loading="lazy" />
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
       {isAI && (
         <section className="story-block">
           <h3 className="story-title">
@@ -139,43 +130,9 @@ export default function EditionContent({ edition, onRequest }) {
             venue will be shared once confirmed.
           </p>
           <button className="button button-dark" onClick={onRequest}>
-            Express your interest
+            Request an invitation
           </button>
         </section>
-      )}
-      {photo !== null && (
-        <Dialog
-          title={edition.photos[photo].alt}
-          className="photo-dialog"
-          onClose={() => setPhoto(null)}
-        >
-          <img
-            src={edition.photos[photo].src}
-            alt={edition.photos[photo].alt}
-          />
-          <p>{edition.photos[photo].caption}</p>
-          <div className="photo-controls">
-            <button
-              className="text-button"
-              onClick={() =>
-                setPhoto(
-                  (photo + edition.photos.length - 1) % edition.photos.length,
-                )
-              }
-            >
-              Previous
-            </button>
-            <span className="mono">
-              {photo + 1} / {edition.photos.length}
-            </span>
-            <button
-              className="text-button"
-              onClick={() => setPhoto((photo + 1) % edition.photos.length)}
-            >
-              Next
-            </button>
-          </div>
-        </Dialog>
       )}
     </article>
   );

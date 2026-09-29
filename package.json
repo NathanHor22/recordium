@@ -8,6 +8,10 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test:browser": "node scripts/verify.mjs",
+    "test:loader": "node scripts/verify-loader.mjs",
+    "test:refinement": "node scripts/verify-refinement.mjs",
+    "test:event-flow": "node scripts/verify-event-flow.mjs",
+    "test:carousel": "node scripts/verify-carousel.mjs",
     "format": "prettier --write src scripts package.json vite.config.js index.html"
   },
   "dependencies": {

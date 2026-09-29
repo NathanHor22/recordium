@@ -6,6 +6,14 @@
   pointer-events: none;
   background: linear-gradient(125deg, #f1f1f3 0%, #d4d4de 48%, #e7e7ec 100%);
 }
+.fog-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fafaf7;
+  opacity: 0.6;
+  pointer-events: none;
+}
 
 .fog-background__frame,
 .fog-background__effect {

@@ -2,6 +2,78 @@
   isolation: isolate;
   min-height: 100vh;
   --sans: "DM Sans", Arial, sans-serif;
+  --brand: #ff7022;
+  --brand-wash: #fff0e7;
+  --acid: var(--brand);
+  --paper: #f5f5f2;
+}
+.experience :is(button, a, input, textarea, select):focus-visible {
+  outline-color: #b6460a;
+}
+.experience .hero-heading h1 > .hero-period {
+  color: var(--brand);
+}
+.hero-word-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.experience .hero-heading h1 > .hero-word-mask {
+  color: var(--ink);
+}
+.hero-word-mask > span {
+  display: inline-block;
+}
+.intro-pending:not(.intro-revealing) .hero-word-mask > span,
+.intro-pending:not(.intro-revealing) .hero-period {
+  opacity: 0;
+}
+.intro-revealing .hero-word-mask > span {
+  animation: headline-reveal 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.intro-revealing .hero-word-mask:nth-child(2) > span {
+  animation-delay: 0.1s;
+}
+.intro-revealing .hero-word-mask:nth-child(3) > span {
+  animation-delay: 0.2s;
+}
+.intro-revealing .hero-period {
+  animation: room-fade-in 0.25s 0.65s both;
+}
+.intro-revealing .hero-support {
+  animation: hero-arrive 0.65s 0.3s both;
+}
+@keyframes headline-reveal {
+  from {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.experience .button-dark {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--ink);
+}
+.experience .button-dark:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.experience .invitation-submit {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--ink);
+}
+.experience .invitation-submit:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
 }
 .public-content {
   position: relative;
@@ -32,7 +104,7 @@
   background: #ffffff80;
 }
 .experience .icon-button:hover {
-  background: #d3ed73;
+  background: var(--brand-wash);
 }
 .experience .button,
 .experience .text-button {
@@ -46,7 +118,8 @@
   text-decoration: none;
 }
 .experience .text-button:hover {
-  background: #d3ed73;
+  background: var(--brand-wash);
+  color: var(--ink);
   text-decoration: none;
 }
 .experience .desktop-nav {
@@ -72,7 +145,7 @@
 }
 .experience .mobile-menu-button:hover,
 .experience .room-close:hover {
-  background: #d3ed73;
+  background: var(--brand-wash);
   transform: translateY(-2px);
 }
 .experience .mobile-nav {
@@ -90,7 +163,7 @@
   font-size: 16px;
 }
 .experience .mobile-nav button:hover {
-  background: #d3ed73;
+  background: var(--brand-wash);
 }
 .experience .home-stage {
   height: min(850px, calc(100svh - 115px));
@@ -149,10 +222,13 @@
   font-weight: 500;
 }
 .hero-record-index .record-choice:hover {
-  background: #d3ed73;
+  background: var(--brand);
   color: #171816;
   transform: translateY(-4px);
   box-shadow: 0 8px 24px #17181620;
+}
+.hero-record-index .record-choice-ai:hover {
+  background: #d3ed73;
 }
 .upcoming-badge {
   display: inline-flex;
@@ -199,6 +275,19 @@
 .world-canvas-reading {
   z-index: 32;
 }
+.intro-revealing .hero-record-index {
+  animation: room-fade-in 0.65s 0.4s both;
+}
+@keyframes hero-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .record-fallback {
   height: 100%;
   display: grid;
@@ -212,10 +301,10 @@
 }
 .collection-portal {
   position: relative;
-  height: 230svh;
-  min-height: 1500px;
+  height: 205svh;
+  min-height: 1350px;
   border-top: 1px solid #17181625;
-  background: #f8faf673;
+  background: #fafaf8a8;
 }
 .portal-sticky {
   height: 100svh;
@@ -251,7 +340,7 @@
   font-weight: 400;
 }
 .portal-title strong > span {
-  color: #748632;
+  color: var(--brand);
 }
 .collection-reveal {
   position: absolute;
@@ -291,16 +380,13 @@
 .catalogue-record {
   position: relative;
   padding: 18px 24px 24px;
-  border: 1px solid #17181630;
-  background: #ffffff32;
+  border: 0;
+  background: transparent;
   text-align: left;
   min-width: 0;
 }
 .catalogue-record:hover {
-  background: #ffffff7a;
-  border-color: #17181670;
-  transform: translateY(-5px);
-  box-shadow: 0 20px 45px #17181610;
+  background: transparent;
 }
 .catalogue-object {
   position: relative;
@@ -313,11 +399,11 @@
 .catalogue-cover {
   position: absolute;
   inset: 0;
-  background: #e7e8e0;
+  background: #eeeee9;
   box-shadow:
     1px 1px 0 #fafbf8,
-    3px 4px 0 #a5aaa0,
-    10px 22px 32px #10121b25;
+    2px 3px 0 #c2c2ba,
+    6px 18px 30px #10121b1f;
   transform: rotate(-4deg);
   transition: transform 0.65s cubic-bezier(0.2, 0.75, 0.2, 1);
   overflow: hidden;
@@ -405,17 +491,32 @@
   place-items: center;
   width: 34%;
   height: 34%;
-  background: #d7e598;
+  background: var(--brand, #ff7022);
   border-radius: 50%;
 }
-.catalogue-record:hover .catalogue-cover {
+.catalogue-record-ai .catalogue-vinyl > span {
+  background: #d3ed73;
+}
+.catalogue-record:is(:hover, :focus-visible) .catalogue-cover {
   transform: rotate(-2deg) translateY(-5px);
 }
-.catalogue-record-ai:hover .catalogue-cover {
+.catalogue-record-ai:is(:hover, :focus-visible) .catalogue-cover {
   transform: rotate(2deg) translateY(-5px);
 }
-.catalogue-record:hover .catalogue-vinyl {
+.catalogue-record:is(:hover, :focus-visible) .catalogue-vinyl {
   transform: translateX(8%) rotate(35deg);
+}
+.catalogue-transfer {
+  position: fixed;
+  z-index: 33;
+  pointer-events: none;
+  --display: "Anton", "Arial Narrow", Impact, sans-serif;
+}
+.catalogue-transfer .catalogue-object {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
 }
 .catalogue-caption {
   position: relative;
@@ -470,7 +571,7 @@
   line-height: 1.15;
 }
 .statement-first h2 span {
-  color: #d3ed73;
+  color: var(--brand);
 }
 .story-statement p {
   max-width: 820px;
@@ -481,16 +582,16 @@
 }
 .statement-next .button {
   margin-top: 32px;
-  background: #d3ed73;
+  background: var(--brand);
   color: #171816;
-  border: 1px solid #d3ed73;
+  border: 1px solid var(--brand);
 }
 .statement-next .button:hover {
   background: #f5f7ee;
   border-color: #f5f7ee;
 }
 .experience .site-footer {
-  background: #f2f4ed;
+  background: #f5f5f2;
   min-height: 108px;
   padding: 26px 40px;
   display: flex;
@@ -508,7 +609,7 @@
   text-decoration: none;
 }
 .experience .curator-link:hover {
-  background: #d3ed73;
+  background: var(--brand-wash);
   color: #171816;
   transform: translateY(-2px);
 }
@@ -520,7 +621,7 @@
 .room-scrim {
   position: absolute;
   inset: 0;
-  background: #f2f4efed;
+  background: #f7f7f4f2;
   backdrop-filter: blur(22px);
   animation: room-fade-in 0.6s both;
 }
@@ -540,6 +641,36 @@
   font-size: 17px;
   font-weight: 500;
 }
+.room-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.room-share-status {
+  font-size: 14px;
+  color: #555550;
+}
+.room-share-fallback {
+  position: absolute;
+  z-index: 4;
+  top: 84px;
+  right: 40px;
+  width: min(380px, calc(100% - 40px));
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #17181635;
+}
+.room-share-fallback label {
+  display: grid;
+  gap: 10px;
+  font-size: 14px;
+}
+.room-share-fallback input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #bbb;
+}
 .experience .room-close {
   width: 42px;
   height: 42px;
@@ -554,8 +685,22 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: #9ba68a transparent;
-  animation: story-arrive 0.85s 0.12s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  scrollbar-color: #b8b8b2 transparent;
+}
+.room-copy-arrival {
+  animation: story-arrive 0.6s 0.12s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.room-story {
+  transition:
+    opacity 0.22s ease,
+    transform 0.3s ease;
+}
+.is-changing .room-story {
+  opacity: 0.18;
+  transform: translateY(8px);
+}
+.is-returning .room-story {
+  opacity: 0.55;
 }
 .room-story:focus-visible {
   outline-offset: -4px;
@@ -568,7 +713,10 @@
   overflow-wrap: anywhere;
 }
 .room-edition-copy > .story-intro > h2 > span {
-  color: #81973e;
+  color: var(--brand);
+}
+.listening-room[data-edition="ai"] .story-intro > h2 > span {
+  color: #718627;
 }
 .room-edition-copy .story-intro > .upcoming-badge {
   margin-bottom: 20px;
@@ -580,11 +728,11 @@
 .room-edition-copy .edition-context {
   font-size: 16px;
   line-height: 1.6;
-  color: #5e6555;
+  color: #61615b;
   margin-top: 18px;
 }
 .room-edition-copy .body-copy {
-  color: #4e5347;
+  color: #51514c;
   font-size: 16px;
   line-height: 1.8;
 }
@@ -619,9 +767,13 @@
   gap: 16px;
 }
 .room-edition-copy .track > button:hover {
-  background: #e5edcf;
-  border-color: #8d9c50;
+  background: var(--brand-wash);
+  border-color: #c56b3b;
   transform: translateX(3px);
+}
+.room-edition-copy .track > button[aria-expanded="true"] {
+  color: var(--ink);
+  border-color: #c56b3b;
 }
 .room-edition-copy .track h3 {
   flex: 1;
@@ -665,7 +817,7 @@
   text-align: center;
 }
 .room-record-switch button:hover {
-  background: #dce8bb;
+  background: var(--brand-wash);
   transform: translateY(-3px);
 }
 .room-record-switch .is-current {
@@ -674,13 +826,13 @@
   color: #fff;
 }
 .room-record-switch .is-current:hover {
-  background: #303629;
+  background: #343431;
 }
 .is-closing {
   pointer-events: none;
 }
 .is-closing .room-scrim {
-  animation: room-fade-out 0.8s both;
+  animation: room-fade-out 0.75s both;
 }
 .is-closing .room-story {
   animation: story-depart 0.5s both;
@@ -917,8 +1069,8 @@
     font-size: 14px;
   }
   .collection-portal {
-    height: 235svh;
-    min-height: 1450px;
+    height: 200svh;
+    min-height: 1240px;
   }
   .portal-sticky {
     min-height: 680px;
@@ -1005,19 +1157,40 @@
     right: 20px;
   }
   .room-brand {
-    font-size: 15px;
+    font-size: 14px;
+  }
+  .room-actions {
+    gap: 8px;
+  }
+  .room-actions .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+  .room-share-status {
+    position: absolute;
+    right: 46px;
+    top: 62px;
+    padding: 5px 8px;
+    background: #f7f7f4;
+  }
+  .room-share-status:empty {
+    display: none;
+  }
+  .room-share-fallback {
+    top: 66px;
+    right: 20px;
   }
   .experience .room-close {
     width: 36px;
     height: 36px;
   }
   .room-story {
-    top: calc(66px + min(285px, 33vh) + 97px);
+    top: calc(66px + min(240px, 26vh) + 79px);
     bottom: 0;
     width: 100%;
     padding: 28px 24px 35px;
     border-top: 1px solid #17181630;
-    background: #f4f6efb3;
+    background: #f7f7f4db;
   }
   .room-edition-copy > .story-intro > h2 {
     font-size: 45px;
@@ -1031,14 +1204,14 @@
   .room-player-controls {
     left: 20px;
     right: 20px;
-    top: calc(66px + min(285px, 33vh));
+    top: calc(66px + min(240px, 26vh));
     bottom: auto;
   }
   .room-record-switch {
     gap: 10px;
   }
   .room-record-switch button {
-    min-height: 78px;
+    min-height: 66px;
     padding: 8px 10px;
     font-size: 14px;
     gap: 5px;
@@ -1101,6 +1274,9 @@
   }
 }
 @media (max-width: 390px) {
+  .experience .room-brand > span {
+    font-size: 11px;
+  }
   .experience .hero-heading h1 {
     font-size: 32px;
   }

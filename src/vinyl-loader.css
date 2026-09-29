@@ -1,0 +1,277 @@
+.vinyl-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 36px 24px;
+  overflow: auto;
+  background: #f5f5f2;
+  color: #363636;
+  opacity: 1;
+  visibility: visible;
+  transition: background-color 650ms ease;
+}
+.vinyl-loader-exiting {
+  background: transparent;
+  pointer-events: none;
+}
+.vinyl-loader-exiting .vinyl-loader-brand,
+.vinyl-loader-exiting .vinyl-loader-caption,
+.vinyl-loader-exiting .vinyl-loader-action {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition:
+    opacity 220ms ease,
+    transform 350ms ease;
+}
+.vinyl-loader-exiting .vinyl-loader-disc {
+  opacity: 0;
+  transition: opacity 300ms 650ms ease;
+}
+.vinyl-loader-inner {
+  width: min(100%, 440px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 16px;
+}
+.vinyl-loader-brand {
+  width: 130px;
+  max-width: 80%;
+  height: auto;
+  margin-bottom: 38px;
+  color: #363636;
+}
+.vinyl-loader-disc {
+  width: 320px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 16px 17px #36363615);
+}
+.vinyl-loader-record {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: vinyl-loader-spin 5s linear infinite;
+}
+.vinyl-loader-rim {
+  fill: #363636;
+}
+.vinyl-loader-surface {
+  fill: #c7c8c1;
+}
+.vinyl-loader-colour {
+  fill: none;
+  stroke: #ff7022;
+  stroke-width: 11;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition:
+    stroke-dashoffset 650ms cubic-bezier(0.2, 0.65, 0.2, 1),
+    opacity 250ms ease;
+}
+.vinyl-loader-grooves {
+  fill: none;
+  stroke: #363636;
+  stroke-width: 0.65;
+  opacity: 0.24;
+}
+.vinyl-loader-label {
+  fill: #fff;
+  stroke: #363636;
+  stroke-width: 1;
+}
+.vinyl-loader-label-ring {
+  fill: none;
+  stroke: #363636;
+  stroke-width: 0.7;
+  opacity: 0.17;
+}
+.vinyl-loader-label-mark {
+  fill: #ff7022;
+}
+.vinyl-loader-spindle {
+  fill: #363636;
+  stroke: #e4e5df;
+  stroke-width: 2;
+}
+.vinyl-loader-reflection {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.3;
+  opacity: 0.4;
+}
+.vinyl-loader-caption {
+  width: 100%;
+  margin-top: 32px;
+  text-align: center;
+}
+.vinyl-loader-phrases {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 30px;
+}
+.vinyl-loader-phrases > span {
+  grid-area: 1 / 1;
+  align-self: center;
+  opacity: 0;
+  transform: translateY(5px);
+  font:
+    500 18px/1.5 "DM Sans",
+    sans-serif;
+  transition:
+    opacity 250ms ease,
+    transform 300ms ease;
+}
+.vinyl-loader-phrases > .vinyl-loader-phrase-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.vinyl-loader-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.vinyl-loader-action {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 72px;
+}
+.vinyl-loader-continue {
+  min-height: 46px;
+  max-width: 100%;
+  border: 1px solid #363636;
+  border-radius: 0;
+  padding: 12px 22px;
+  background: #363636;
+  color: #fff;
+  font:
+    500 15px/1.4 "DM Sans",
+    sans-serif;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+.vinyl-loader-continue:hover {
+  background: #ff7022;
+  color: #363636;
+}
+.vinyl-loader-continue:focus-visible {
+  outline: 2px solid #ff7022;
+  outline-offset: 5px;
+}
+.vinyl-loader-continue:disabled {
+  cursor: default;
+}
+@keyframes vinyl-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 480px) {
+  .vinyl-loader {
+    padding: 28px 24px;
+  }
+  .vinyl-loader-brand {
+    width: 130px;
+    margin-bottom: 30px;
+  }
+  .vinyl-loader-disc {
+    width: 270px;
+  }
+  .vinyl-loader-caption {
+    margin-top: 27px;
+  }
+  .vinyl-loader-phrases > span {
+    font-size: 16px;
+  }
+}
+@media (max-height: 650px) {
+  .vinyl-loader {
+    padding-block: 22px;
+  }
+  .vinyl-loader-inner {
+    padding-top: 0;
+  }
+  .vinyl-loader-brand {
+    width: 100px;
+    margin-bottom: 24px;
+  }
+  .vinyl-loader-disc {
+    width: 220px;
+  }
+  .vinyl-loader-caption {
+    margin-top: 20px;
+  }
+  .vinyl-loader-action {
+    min-height: 62px;
+  }
+}
+@media (max-height: 480px) and (min-width: 520px) {
+  .vinyl-loader-inner {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 32px;
+    width: min(100%, 520px);
+  }
+  .vinyl-loader-brand {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    margin: 0;
+  }
+  .vinyl-loader-disc {
+    grid-column: 1;
+    grid-row: 1 / 4;
+  }
+  .vinyl-loader-caption {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+  }
+  .vinyl-loader-phrases > span {
+    font-size: 16px;
+  }
+  .vinyl-loader-action {
+    grid-column: 2;
+    grid-row: 3;
+    min-height: 46px;
+    align-items: center;
+  }
+}
+.vinyl-loader-reduced,
+.vinyl-loader-reduced *,
+.vinyl-loader-reduced *::before,
+.vinyl-loader-reduced *::after {
+  animation: none !important;
+  transition: none !important;
+}
+.vinyl-loader-reduced .vinyl-loader-record,
+.vinyl-loader-reduced .vinyl-loader-phrases > span {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vinyl-loader,
+  .vinyl-loader *,
+  .vinyl-loader *::before,
+  .vinyl-loader *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .vinyl-loader-record,
+  .vinyl-loader-phrases > span {
+    transform: none;
+  }
+}

@@ -51,7 +51,37 @@ export const editions = {
         linkedin: null,
       },
     ],
-    photos: [],
+    photos: [
+      {
+        src: "/assets/roundtable-04.jpeg",
+        width: 1280,
+        height: 905,
+        alt: "Group photograph of the roundtable participants in front of the Synapze office sign.",
+        caption:
+          "The first Conversations for the Greater Good roundtable at the Synapze office.",
+      },
+      {
+        src: "/assets/roundtable-01.jpeg",
+        width: 1280,
+        height: 960,
+        alt: "A participant stands beside the table and speaks to the seated group.",
+        caption: "Perspectives shared around the table.",
+      },
+      {
+        src: "/assets/roundtable-02.jpeg",
+        width: 1280,
+        height: 830,
+        alt: "People seated around the table listen as one participant gestures during the discussion.",
+        caption: "The conversation continued over a meal.",
+      },
+      {
+        src: "/assets/roundtable-03.jpeg",
+        width: 1280,
+        height: 766,
+        alt: "A wide view of the roundtable discussion, with people seated on both sides of the table.",
+        caption: "Different experiences, one conversation.",
+      },
+    ],
     linkedinPost: null,
   },
   ai: {

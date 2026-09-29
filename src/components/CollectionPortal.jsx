@@ -16,35 +16,47 @@ export default function CollectionPortal({ onSelect, reducedMotion }) {
       const timeline = gsap.timeline({
         scrollTrigger: {
           trigger: root.current,
-          start: "top bottom",
+          start: "top 85%",
           end: "bottom bottom",
-          scrub: 0.45,
+          scrub: 0.55,
           invalidateOnRefresh: true,
         },
       });
       timeline
         .fromTo(
           title.current,
-          { scale: 0.17, y: 90, opacity: 0.65 },
-          { scale: 1, y: 0, opacity: 1, duration: 0.52, ease: "power2.out" },
+          { scale: 0.25, y: 70, opacity: 0.5 },
+          { scale: 1, y: 0, opacity: 1, duration: 0.42, ease: "power2.out" },
         )
         .to(
           title.current,
           {
-            scale: 1.65,
+            scale: 1.45,
             opacity: 0,
-            filter: "blur(5px)",
-            duration: 0.3,
+            duration: 0.28,
             ease: "power2.in",
           },
-          0.63,
+          0.5,
         )
         .fromTo(
           reveal.current,
-          { y: 110, autoAlpha: 0 },
-          { y: 0, autoAlpha: 1, duration: 0.38, ease: "power2.out" },
-          0.83,
-        );
+          { y: 60, autoAlpha: 0 },
+          { y: 0, autoAlpha: 1, duration: 0.32, ease: "power2.out" },
+          0.65,
+        )
+        .fromTo(
+          ".catalogue-object",
+          { y: 65, rotate: 3 },
+          {
+            y: 0,
+            rotate: 0,
+            duration: 0.35,
+            stagger: 0.06,
+            ease: "power2.out",
+          },
+          0.68,
+        )
+        .to({}, { duration: 0.2 });
       gsap.to(progress.current, {
         scaleX: 1,
         ease: "none",

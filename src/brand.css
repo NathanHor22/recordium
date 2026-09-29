@@ -1,0 +1,92 @@
+@font-face {
+  font-family: "FTGG Perpetua";
+  src: local("Perpetua Titling MT Light"), local("Perpetua Titling MT");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+.brand-logo {
+  display: block;
+  width: 118px;
+  height: auto;
+  aspect-ratio: 176 / 151;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.brand-logo-compact {
+  width: 42px;
+  aspect-ratio: 1;
+}
+.experience .site-header {
+  height: 120px;
+}
+.experience .brand {
+  min-width: 150px;
+}
+.experience .header-logo-compact {
+  display: none;
+}
+.experience .home-stage {
+  height: min(850px, calc(100svh - 155px));
+}
+.experience .room-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.experience .room-brand > span {
+  font-family: "FTGG Perpetua", Georgia, serif;
+  font-weight: 300;
+}
+.experience .room-logo {
+  width: 36px;
+}
+.experience .footer-logo {
+  width: 142px;
+}
+.admin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-brand .brand-logo {
+  width: 38px;
+}
+.intro-pending .world-canvas {
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .experience .site-header {
+    height: 88px;
+  }
+  .experience .brand {
+    min-width: 42px;
+  }
+  .experience .header-logo {
+    display: none;
+  }
+  .experience .header-logo-compact {
+    display: block;
+  }
+  .experience .mobile-nav {
+    top: 87px;
+  }
+  .experience .home-stage {
+    height: calc(100svh - 120px);
+  }
+  .experience .room-logo {
+    width: 28px;
+  }
+  .experience .room-brand {
+    gap: 8px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 390px) {
+  .experience .header-logo-compact {
+    width: 36px;
+  }
+  .experience .brand {
+    min-width: 36px;
+  }
+}

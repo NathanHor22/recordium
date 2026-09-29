@@ -1,11 +1,24 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, RoundedBox } from "@react-three/drei";
+import {
+  ContactShadows,
+  Environment,
+  Lightformer,
+  RoundedBox,
+} from "@react-three/drei";
 import * as THREE from "three";
 
 const LIME = "#c7ed48";
-const PAPER = "#eeeee7";
-const BLACK = "#1b1d1c";
+const PAPER = "#efefeb";
+const BLACK = "#1b1c1d";
+const ORANGE = "#ff7022";
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
 
@@ -19,6 +32,30 @@ function canvasTexture(draw) {
   return texture;
 }
 
+function makeSurfaceGrain(brushed = false) {
+  const texture = canvasTexture((ctx) => {
+    ctx.fillStyle = brushed ? "#cccccc" : "#dddddd";
+    ctx.fillRect(0, 0, 1024, 1024);
+    let seed = 47;
+    for (let index = 0; index < (brushed ? 6000 : 26000); index += 1) {
+      seed = (seed * 16807) % 2147483647;
+      const x = seed % 1024;
+      seed = (seed * 16807) % 2147483647;
+      const y = seed % 1024;
+      ctx.fillStyle = index % 2 ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.07)";
+      ctx.fillRect(
+        x,
+        y,
+        brushed ? 24 + (seed % 160) : 1.4,
+        brushed ? 0.6 : 1.4,
+      );
+    }
+  });
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
 function coverArtwork(ctx, edition, artwork) {
   const ai = edition === "ai";
   ctx.fillStyle = ai ? LIME : PAPER;
@@ -28,7 +65,7 @@ function coverArtwork(ctx, edition, artwork) {
     if (!ai) ctx.globalCompositeOperation = "multiply";
     ctx.drawImage(artwork, 0, ai ? 330 : 350, 1024, 1024);
     ctx.restore();
-    ctx.fillStyle = ai ? "rgba(199,237,72,.06)" : "rgba(238,238,231,.06)";
+    ctx.fillStyle = ai ? "rgba(199,237,72,.06)" : "rgba(239,239,235,.06)";
     ctx.fillRect(0, 0, 1024, 1024);
   } else {
     ctx.save();
@@ -155,23 +192,23 @@ function makeLabel(edition) {
 
 function makeGrooves() {
   return canvasTexture((ctx) => {
-    ctx.fillStyle = "#181a19";
+    ctx.fillStyle = "#18191b";
     ctx.fillRect(0, 0, 1024, 1024);
     const sheen = ctx.createConicGradient(0.3, 512, 512);
-    sheen.addColorStop(0, "#171918");
-    sheen.addColorStop(0.14, "#414440");
-    sheen.addColorStop(0.29, "#181a19");
-    sheen.addColorStop(0.5, "#101211");
-    sheen.addColorStop(0.68, "#444743");
-    sheen.addColorStop(0.79, "#202320");
-    sheen.addColorStop(1, "#171918");
+    sheen.addColorStop(0, "#17181a");
+    sheen.addColorStop(0.14, "#383a3d");
+    sheen.addColorStop(0.29, "#18191b");
+    sheen.addColorStop(0.5, "#101113");
+    sheen.addColorStop(0.68, "#3d3f42");
+    sheen.addColorStop(0.79, "#202225");
+    sheen.addColorStop(1, "#17181a");
     ctx.fillStyle = sheen;
     ctx.fillRect(0, 0, 1024, 1024);
     for (let radius = 183; radius < 500; radius += 2.7) {
       ctx.beginPath();
       ctx.arc(512, 512, radius, 0, Math.PI * 2);
       ctx.strokeStyle =
-        Math.round(radius) % 4 ? "rgba(0,0,0,.42)" : "rgba(225,230,219,.12)";
+        Math.round(radius) % 4 ? "rgba(0,0,0,.42)" : "rgba(228,230,234,.12)";
       ctx.lineWidth = 0.9;
       ctx.stroke();
     }
@@ -198,17 +235,26 @@ function Vinyl({
   useEffect(() => () => grooves.dispose(), [grooves]);
   useEffect(() => () => label.dispose(), [label]);
   useFrame((_, dt) => {
-    if (group.current && spinning && !paused && !reducedMotion)
+    if (!group.current) return;
+    if (spinning && !paused && !reducedMotion)
       group.current.rotation.y -= Math.min(dt, 0.05) * 0.85;
+    else if (!spinning) {
+      const angle = Math.atan2(
+        Math.sin(group.current.rotation.y),
+        Math.cos(group.current.rotation.y),
+      );
+      group.current.rotation.y -=
+        angle * (reducedMotion ? 1 : 1 - Math.exp(-Math.min(dt, 0.05) * 12));
+    }
   });
   return (
     <group ref={group} scale={radius}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[1, 1, 0.033, 96]} />
         <meshStandardMaterial
-          color="#101311"
-          metalness={0.35}
-          roughness={0.27}
+          color="#101113"
+          metalness={0.16}
+          roughness={0.3}
         />
       </mesh>
       <mesh
@@ -217,7 +263,14 @@ function Vinyl({
         receiveShadow
       >
         <ringGeometry args={[0.018, 0.994, 128]} />
-        <meshStandardMaterial map={grooves} metalness={0.27} roughness={0.32} />
+        <meshPhysicalMaterial
+          map={grooves}
+          metalness={0.12}
+          roughness={0.34}
+          clearcoat={0.85}
+          clearcoatRoughness={0.23}
+          envMapIntensity={0.7}
+        />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <ringGeometry args={[0.025, 0.345, 80]} />
@@ -249,6 +302,8 @@ function Sleeve({
   });
   const [hovered, setHovered] = useState(false);
   const cover = useCoverTexture(edition);
+  const paperGrain = useMemo(() => makeSurfaceGrain(), []);
+  useEffect(() => () => paperGrain.dispose(), [paperGrain]);
   useEffect(() => {
     if (hovered) document.body.style.cursor = "pointer";
     return () => {
@@ -331,13 +386,20 @@ function Sleeve({
       <mesh castShadow receiveShadow>
         <boxGeometry args={[2.53, 2.53, 0.062]} />
         <meshStandardMaterial
-          color={edition === "ai" ? "#a0bd3f" : "#d4d4cb"}
+          color={edition === "ai" ? "#a0bd3f" : "#d6d6d2"}
           roughness={0.88}
         />
       </mesh>
       <mesh position={[0, 0, 0.033]} castShadow receiveShadow>
         <planeGeometry args={[2.525, 2.525]} />
-        <meshStandardMaterial map={cover} roughness={0.83} />
+        <meshStandardMaterial
+          map={cover}
+          roughness={0.96}
+          roughnessMap={paperGrain}
+          bumpMap={paperGrain}
+          bumpScale={0.003}
+          envMapIntensity={0.45}
+        />
       </mesh>
       <mesh position={[-1.254, 0, 0.037]}>
         <planeGeometry args={[0.008, 2.52]} />
@@ -351,7 +413,7 @@ function MetalRod({
   from,
   to,
   radius = 0.028,
-  color = "#a6a9a5",
+  color = "#b1b5b9",
   roughness = 0.3,
 }) {
   const { midpoint, quaternion, length } = useMemo(() => {
@@ -400,7 +462,7 @@ function Tonearm({ playing, progress, paused, reducedMotion }) {
       <mesh castShadow>
         <cylinderGeometry args={[0.14, 0.16, 0.12, 32]} />
         <meshStandardMaterial
-          color="#363b36"
+          color="#37393c"
           metalness={0.55}
           roughness={0.35}
         />
@@ -408,7 +470,7 @@ function Tonearm({ playing, progress, paused, reducedMotion }) {
       <mesh position={[0, 0.09, 0]} castShadow>
         <cylinderGeometry args={[0.065, 0.065, 0.1, 24]} />
         <meshStandardMaterial
-          color="#a7ada7"
+          color="#b4b8bd"
           metalness={0.9}
           roughness={0.24}
         />
@@ -424,7 +486,7 @@ function Tonearm({ playing, progress, paused, reducedMotion }) {
         >
           <cylinderGeometry args={[0.095, 0.095, 0.2, 32]} />
           <meshStandardMaterial
-            color="#6c736b"
+            color="#8b8f94"
             metalness={0.78}
             roughness={0.29}
           />
@@ -436,14 +498,14 @@ function Tonearm({ playing, progress, paused, reducedMotion }) {
         >
           <boxGeometry args={[0.12, 0.05, 0.23]} />
           <meshStandardMaterial
-            color="#222820"
+            color="#242629"
             roughness={0.42}
             metalness={0.4}
           />
         </mesh>
         <mesh position={[-0.43, -0.07, 1.15]}>
           <boxGeometry args={[0.065, 0.07, 0.075]} />
-          <meshStandardMaterial color="#c0dc5d" roughness={0.5} />
+          <meshStandardMaterial color={ORANGE} roughness={0.5} />
         </mesh>
         <MetalRod
           from={[-0.33, 0.02, 1.14]}
@@ -460,7 +522,7 @@ function DeckText() {
     () =>
       canvasTexture((ctx) => {
         ctx.clearRect(0, 0, 1024, 1024);
-        ctx.fillStyle = "#363b35";
+        ctx.fillStyle = "#36383b";
         ctx.font = "700 70px Arial, sans-serif";
         ctx.fillText("FTGG", 20, 130);
         ctx.font = "400 24px Arial, sans-serif";
@@ -482,18 +544,54 @@ function Turntable({
   scale,
   edition,
   playing,
+  landed,
+  motion,
   progress,
   paused,
   reducedMotion,
   sourceSleeve,
+  onIntroTargetReady,
 }) {
+  const { camera, gl } = useThree();
   const base = useRef();
   const disc = useRef();
   const initialTransform = useRef({ position: [...position], scale });
-  const elapsed = useRef(0);
-  const [landed, setLanded] = useState(false);
-  const wasPlaying = useRef(false);
-  const previousEdition = useRef(edition);
+  const brushedMetal = useMemo(() => makeSurfaceGrain(true), []);
+  useEffect(() => () => brushedMetal.dispose(), [brushedMetal]);
+  const getIntroTarget = useMemo(() => {
+    const point = new THREE.Vector3();
+    return () => {
+      const rect = gl.domElement.getBoundingClientRect();
+      if (!base.current || !rect.width || !rect.height) return null;
+      base.current.updateWorldMatrix(true, false);
+      camera.updateMatrixWorld();
+      let left = Infinity;
+      let top = Infinity;
+      let right = -Infinity;
+      let bottom = -Infinity;
+      // Project the rubber platter rim so the loader can land on the real deck.
+      for (let index = 0; index < 64; index += 1) {
+        const angle = (index / 64) * Math.PI * 2;
+        point.set(
+          -0.35 + Math.cos(angle) * 1.015,
+          0.565,
+          0.05 + Math.sin(angle) * 1.015,
+        );
+        base.current.localToWorld(point).project(camera);
+        const x = rect.left + ((point.x + 1) / 2) * rect.width;
+        const y = rect.top + ((1 - point.y) / 2) * rect.height;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+      return { x: left, y: top, width: right - left, height: bottom - top };
+    };
+  }, [camera, gl]);
+  useEffect(() => {
+    onIntroTargetReady?.(getIntroTarget);
+    return () => onIntroTargetReady?.(null);
+  }, [getIntroTarget, onIntroTargetReady]);
   const flight = useMemo(
     () => ({
       point: new THREE.Vector3(),
@@ -514,7 +612,7 @@ function Turntable({
   const spindleMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#c8cec6",
+        color: "#d0d3d7",
         metalness: 0.9,
         roughness: 0.24,
       }),
@@ -526,33 +624,15 @@ function Turntable({
     const speed = reducedMotion ? 1 : 1 - Math.exp(-dt * 5);
     base.current.position.lerp(flight.target.set(...position), speed);
     base.current.scale.setScalar(lerp(base.current.scale.x, scale, speed));
-    const editionChanged = edition !== previousEdition.current;
-    if (editionChanged) {
-      elapsed.current = playing ? -0.28 : 0;
-      previousEdition.current = edition;
-      setLanded(false);
-    }
-    if (playing !== wasPlaying.current) {
-      // Let the reading-view fade begin before the vinyl leaves its sleeve.
-      if (playing && elapsed.current <= 0) elapsed.current = -0.28;
-      wasPlaying.current = playing;
-      setLanded(false);
-    }
-    elapsed.current = reducedMotion
-      ? playing
-        ? 2
-        : 0
-      : playing
-        ? Math.min(2, elapsed.current + dt)
-        : Math.max(0, elapsed.current - dt * 2.5);
-    const time = clamp(elapsed.current / 2, 0, 1);
+    const time =
+      motion.current.edition === edition ? motion.current.progress : 0;
     const extraction = clamp(time / 0.34, 0, 1);
     const travel = clamp((time - 0.34) / 0.66, 0, 1);
     const eased = THREE.MathUtils.smootherstep(travel, 0, 1);
     const sleeve = sourceSleeve.current;
     if (!sleeve) return;
     const sleeveRecord = sleeve.getObjectByName("sleeve-record");
-    const movingRecordVisible = playing || time > 0;
+    const movingRecordVisible = time > 0;
     disc.current.visible = movingRecordVisible;
     if (sleeveRecord) sleeveRecord.visible = !movingRecordVisible;
     if (!movingRecordVisible) return;
@@ -580,7 +660,6 @@ function Turntable({
     disc.current.scale.setScalar(
       lerp((flight.scale.x * 1.2) / flight.baseScale.x, 0.98, eased),
     );
-    if (time === 1 && playing && !landed) setLanded(true);
   });
   const strobe = useMemo(
     () => Array.from({ length: 68 }, (_, index) => (index * Math.PI * 2) / 68),
@@ -597,7 +676,7 @@ function Turntable({
           <mesh key={`${x}-${z}`} position={[x, 0.015, z]} castShadow>
             <cylinderGeometry args={[0.16, 0.145, 0.12, 24]} />
             <meshStandardMaterial
-              color="#22251f"
+              color="#232427"
               roughness={0.6}
               metalness={0.1}
             />
@@ -613,7 +692,7 @@ function Turntable({
         receiveShadow
       >
         <meshStandardMaterial
-          color="#333832"
+          color="#303236"
           roughness={0.53}
           metalness={0.34}
         />
@@ -626,16 +705,21 @@ function Turntable({
         castShadow
         receiveShadow
       >
-        <meshStandardMaterial
-          color="#b9c0b4"
-          roughness={0.37}
-          metalness={0.62}
+        <meshPhysicalMaterial
+          color="#bfc2c6"
+          roughness={0.48}
+          roughnessMap={brushedMetal}
+          bumpMap={brushedMetal}
+          bumpScale={0.0012}
+          metalness={0.8}
+          clearcoat={0.12}
+          clearcoatRoughness={0.42}
         />
       </RoundedBox>
       <mesh position={[-0.35, 0.464, 0.05]} castShadow receiveShadow>
         <cylinderGeometry args={[1.075, 1.075, 0.07, 96]} />
         <meshStandardMaterial
-          color="#252b25"
+          color="#27292c"
           metalness={0.7}
           roughness={0.25}
         />
@@ -643,7 +727,7 @@ function Turntable({
       <mesh position={[-0.35, 0.506, 0.05]} castShadow receiveShadow>
         <cylinderGeometry args={[1.066, 1.066, 0.045, 96]} />
         <meshStandardMaterial
-          color="#b8c0b5"
+          color="#c1c5ca"
           metalness={0.85}
           roughness={0.24}
         />
@@ -659,13 +743,13 @@ function Turntable({
           rotation={[0, -angle, 0]}
         >
           <boxGeometry args={[0.016, 0.022, 0.028]} />
-          <meshStandardMaterial color="#313830" roughness={0.45} />
+          <meshStandardMaterial color="#34363a" roughness={0.45} />
         </mesh>
       ))}
       <mesh position={[-0.35, 0.542, 0.05]} receiveShadow>
         <cylinderGeometry args={[1.015, 1.015, 0.035, 96]} />
         <meshStandardMaterial
-          color="#252a24"
+          color="#25272a"
           metalness={0.04}
           roughness={0.95}
         />
@@ -677,7 +761,7 @@ function Turntable({
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <torusGeometry args={[radius, 0.006, 5, 80]} />
-          <meshStandardMaterial color="#464c42" roughness={0.8} />
+          <meshStandardMaterial color="#484b50" roughness={0.8} />
         </mesh>
       ))}
       <mesh
@@ -704,26 +788,29 @@ function Turntable({
       <mesh position={[-1.32, 0.46, 0.94]} castShadow>
         <cylinderGeometry args={[0.12, 0.12, 0.08, 32]} />
         <meshStandardMaterial
-          color="#d7ddd3"
+          color="#d8dce1"
           metalness={0.8}
           roughness={0.27}
         />
       </mesh>
       <mesh position={[-1.32, 0.505, 0.94]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.045, 0.055, 28]} />
-        <meshStandardMaterial color="#464b43" />
+        <meshStandardMaterial color="#484b50" />
       </mesh>
       <mesh position={[-1.1, 0.439, 0.94]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.027, 20]} />
-        <meshBasicMaterial color={playing ? "#baf04c" : "#b1543c"} />
+        <meshBasicMaterial
+          color={playing ? ORANGE : "#925439"}
+          toneMapped={false}
+        />
       </mesh>
       <mesh position={[1.19, 0.439, 0.53]}>
         <boxGeometry args={[0.024, 0.009, 0.75]} />
-        <meshStandardMaterial color="#656f60" roughness={0.5} />
+        <meshStandardMaterial color="#686d74" roughness={0.5} />
       </mesh>
       <mesh position={[1.19, 0.467, 0.51]} castShadow>
         <boxGeometry args={[0.14, 0.05, 0.08]} />
-        <meshStandardMaterial color="#d0d6c9" metalness={0.7} roughness={0.3} />
+        <meshStandardMaterial color="#d2d6dc" metalness={0.7} roughness={0.3} />
       </mesh>
       {[-1, 1].map((side) => (
         <mesh
@@ -733,7 +820,7 @@ function Turntable({
         >
           <circleGeometry args={[0.024, 16]} />
           <meshStandardMaterial
-            color="#515a4c"
+            color="#555b63"
             metalness={0.7}
             roughness={0.2}
           />
@@ -744,6 +831,108 @@ function Turntable({
   );
 }
 
+function useRecordPresentation({
+  mode,
+  edition,
+  reducedMotion,
+  onPresentedEdition,
+  onRecordReturned,
+}) {
+  const requested = mode === "edition" ? edition : null;
+  const motion = useRef({
+    edition,
+    active: false,
+    landed: false,
+    progress: 0,
+    direction: 1,
+    hold: 0,
+    presentedSequence: 0,
+    returnedSequence: 0,
+  });
+  const [presented, setPresented] = useState(() => ({ ...motion.current }));
+  const callbacks = useRef({ onPresentedEdition, onRecordReturned });
+  callbacks.current = { onPresentedEdition, onRecordReturned };
+  const notified = useRef({ presented: 0, returned: 0 });
+  const advance = useRef();
+  advance.current = (delta) => {
+    const current = motion.current;
+    let changed = false;
+    let dt = Math.min(delta, 0.05);
+    const activate = (id) => {
+      current.edition = id;
+      current.active = true;
+      current.landed = reducedMotion;
+      current.progress = reducedMotion ? 1 : 0;
+      current.direction = 1;
+      current.hold = reducedMotion ? 0 : 0.12;
+      current.presentedSequence += 1;
+      changed = true;
+    };
+    const consumeHold = () => {
+      const held = Math.min(dt, current.hold);
+      current.hold -= held;
+      dt -= held;
+    };
+
+    if (!current.active) {
+      if (requested) activate(requested);
+    } else if (requested !== current.edition) {
+      if (current.direction !== -1) {
+        current.direction = -1;
+        current.hold = current.landed && !reducedMotion ? 0.09 : 0;
+        current.landed = false;
+        changed = true;
+      }
+      consumeHold();
+      current.progress = reducedMotion
+        ? 0
+        : Math.max(0, current.progress - dt / 0.56);
+      if (current.progress === 0) {
+        // Only a fully sleeved record can change identity or release the room.
+        if (requested) activate(requested);
+        else {
+          current.active = false;
+          current.landed = false;
+          current.hold = 0;
+          current.returnedSequence += 1;
+          changed = true;
+        }
+      }
+    } else {
+      if (current.direction !== 1) {
+        current.direction = 1;
+        current.hold = 0;
+      }
+      consumeHold();
+      current.progress = reducedMotion
+        ? 1
+        : Math.min(1, current.progress + dt / 1.18);
+      if (current.progress === 1 && !current.landed) {
+        current.landed = true;
+        changed = true;
+      }
+    }
+    if (changed) setPresented({ ...current });
+  };
+
+  useLayoutEffect(() => {
+    advance.current(0);
+  }, [requested, reducedMotion]);
+  useFrame((_, dt) => advance.current(dt));
+  useLayoutEffect(() => {
+    if (presented.presentedSequence !== notified.current.presented) {
+      notified.current.presented = presented.presentedSequence;
+      callbacks.current.onPresentedEdition?.(presented.edition);
+    }
+    if (presented.returnedSequence !== notified.current.returned) {
+      notified.current.returned = presented.returnedSequence;
+      callbacks.current.onRecordReturned?.();
+    }
+  }, [presented]);
+
+  return { ...presented, motion };
+}
+
 function Stage({
   mode,
   edition,
@@ -752,9 +941,19 @@ function Stage({
   paused,
   reducedMotion,
   presentation,
+  onIntroTargetReady,
+  onPresentedEdition,
+  onRecordReturned,
 }) {
   const { camera, size } = useThree();
-  const isEdition = mode === "edition";
+  const physical = useRecordPresentation({
+    mode,
+    edition,
+    reducedMotion,
+    onPresentedEdition,
+    onRecordReturned,
+  });
+  const isEdition = physical.active;
   const [smallViewport, setSmallViewport] = useState(
     () => window.innerWidth <= 760,
   );
@@ -806,12 +1005,12 @@ function Stage({
       : [-0.81, 1.49, -0.56];
   return (
     <>
-      <ambientLight intensity={1.25} />
-      <hemisphereLight args={["#ffffff", "#858c73", 1.5]} />
+      <ambientLight intensity={1} />
+      <hemisphereLight args={["#ffffff", "#939397", 1.2]} />
       <Environment resolution={128} frames={1}>
         <Lightformer
           color="#ffffff"
-          intensity={2.5}
+          intensity={2.3}
           position={[0, 5, 0]}
           rotation={[Math.PI / 2, 0, 0]}
           scale={[10, 8, 1]}
@@ -824,7 +1023,7 @@ function Stage({
           scale={[3, 6, 1]}
         />
         <Lightformer
-          color="#eff5dc"
+          color="#f3f5f8"
           intensity={1.3}
           position={[4, 1, 4]}
           rotation={[0, -Math.PI * 0.75, 0]}
@@ -832,8 +1031,8 @@ function Stage({
         />
       </Environment>
       <directionalLight
-        position={[-4, 8, 5]}
-        intensity={3.2}
+        position={[-3, 10, 4]}
+        intensity={2.7}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-8}
@@ -844,30 +1043,30 @@ function Stage({
         shadow-bias={-0.0001}
         shadow-radius={4}
       />
-      <directionalLight position={[5, 4, -3]} intensity={2.1} color="#ffffff" />
+      <directionalLight position={[5, 4, -3]} intensity={1.7} color="#ffffff" />
       <pointLight
         position={[-2, 3, 5]}
-        intensity={5}
-        color="#f7ffe5"
+        intensity={3}
+        color="#ffffff"
         decay={2}
       />
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
+      <ContactShadows
         position={[0, -0.06, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[200, 200]} />
-        <shadowMaterial color="#48513e" transparent opacity={0.2} />
-      </mesh>
+        scale={14}
+        opacity={0.32}
+        blur={2.5}
+        far={3.7}
+        resolution={512}
+        color="#252529"
+      />
       <Sleeve
         edition="intro"
         objectRef={introSleeve}
         position={introPosition}
         rotation={[-0.08, 0.1, -0.1]}
         scale={isEdition ? 0.72 : compact ? 0.77 : 1}
-        visible={!isEdition || edition === "intro"}
+        visible={!isEdition || physical.edition === "intro"}
         interactive={!isEdition}
-        showRecord={!isEdition}
         onSelect={onSelect}
         reducedMotion={reducedMotion}
       />
@@ -877,9 +1076,8 @@ function Stage({
         position={aiPosition}
         rotation={isEdition ? [-0.08, 0.1, -0.1] : [-0.09, -0.12, 0.08]}
         scale={isEdition ? 0.72 : compact ? 0.77 : 1}
-        visible={!isEdition || edition === "ai"}
+        visible={!isEdition || physical.edition === "ai"}
         interactive={!isEdition}
-        showRecord={!isEdition}
         onSelect={onSelect}
         reducedMotion={reducedMotion}
       />
@@ -892,15 +1090,31 @@ function Stage({
               : [2.72, 0.04, 0.43]
         }
         scale={isEdition ? 1.08 : compact ? 0.9 : 1.04}
-        edition={edition}
+        edition={physical.edition}
         playing={isEdition}
+        landed={physical.landed}
+        motion={physical.motion}
         progress={progress}
         paused={paused}
         reducedMotion={reducedMotion}
-        sourceSleeve={edition === "ai" ? aiSleeve : introSleeve}
+        sourceSleeve={physical.edition === "ai" ? aiSleeve : introSleeve}
+        onIntroTargetReady={onIntroTargetReady}
       />
     </>
   );
+}
+
+function SceneReadiness({ readiness, callback }) {
+  useFrame(() => {
+    if (readiness.current.notified) return;
+    // The second pre-render callback follows one completed scene render.
+    readiness.current.frames = Math.min(2, readiness.current.frames + 1);
+    if (readiness.current.frames < 2 || typeof callback.current !== "function")
+      return;
+    readiness.current.notified = true;
+    callback.current();
+  });
+  return null;
 }
 
 export default function RecordScene({
@@ -911,7 +1125,14 @@ export default function RecordScene({
   paused = false,
   reducedMotion = false,
   presentation = "stage",
+  onReady,
+  onIntroTargetReady,
+  onPresentedEdition,
+  onRecordReturned,
 }) {
+  const readiness = useRef({ frames: 0, notified: false });
+  const readyCallback = useRef(onReady);
+  readyCallback.current = onReady;
   return (
     <Canvas
       orthographic
@@ -940,7 +1161,11 @@ export default function RecordScene({
           paused={paused}
           reducedMotion={reducedMotion}
           presentation={presentation}
+          onIntroTargetReady={onIntroTargetReady}
+          onPresentedEdition={onPresentedEdition}
+          onRecordReturned={onRecordReturned}
         />
+        <SceneReadiness readiness={readiness} callback={readyCallback} />
       </Suspense>
     </Canvas>
   );

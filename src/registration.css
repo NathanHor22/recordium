@@ -1,0 +1,147 @@
+.registration-dialog {
+  width: min(540px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100svh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #171816;
+  border-radius: 0;
+  background: #f5f5f0;
+  color: #171816;
+  box-shadow: 0 24px 80px #17181630;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.registration-dialog::backdrop {
+  background: #17181666;
+  backdrop-filter: blur(10px);
+}
+.registration-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 28px;
+  border-bottom: 1px solid #17181626;
+}
+.registration-topline > span {
+  font-family: var(--mono, monospace);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.registration-close {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #17181655;
+  background: transparent;
+  color: #171816;
+  transition: background 180ms ease;
+}
+.registration-close:hover {
+  background: var(--brand-wash, #fff0e7);
+}
+.registration-content {
+  padding: 34px 36px 38px;
+}
+.registration-edition {
+  margin: 0 0 20px;
+  color: #595d53;
+  font-size: 14px;
+  font-weight: 500;
+}
+.registration-dialog h2 {
+  margin: 0;
+  font-family: var(--display, Impact, sans-serif);
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.12;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.registration-dialog h2 > span {
+  color: var(--brand, #ff7022);
+}
+.registration-description {
+  margin-top: 26px;
+  color: #565b50;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.registration-description p + p {
+  margin-top: 12px;
+}
+.registration-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 100%;
+  min-height: 48px;
+  margin-top: 30px;
+  padding: 13px 20px;
+  border: 1px solid var(--brand, #ff7022);
+  background: var(--brand, #ff7022);
+  color: #171816;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
+}
+.registration-action svg {
+  flex-shrink: 0;
+}
+.registration-action:hover {
+  border-color: #e95d14;
+  background: #e95d14;
+}
+.registration-dialog :focus-visible {
+  outline: 2px solid #171816;
+  outline-offset: 4px;
+}
+@media (max-width: 540px) {
+  .registration-topline {
+    padding: 16px 20px;
+    gap: 16px;
+  }
+  .registration-content {
+    padding: 28px 24px 30px;
+  }
+  .registration-dialog h2 {
+    font-size: 40px;
+  }
+  .registration-action {
+    width: 100%;
+  }
+}
+@media (max-width: 340px) {
+  .registration-topline {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .registration-topline > span {
+    font-size: 12px;
+  }
+  .registration-content {
+    padding: 26px 20px 28px;
+  }
+  .registration-dialog h2 {
+    font-size: 36px;
+  }
+  .registration-description {
+    font-size: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .registration-close,
+  .registration-action {
+    transition: none;
+  }
+}

@@ -8,6 +8,8 @@ import "@fontsource/ibm-plex-mono/latin-400.css";
 import App from "./App.jsx";
 import "./styles.css";
 import "./experience.css";
+import "./brand.css";
+import "./story.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
