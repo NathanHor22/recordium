@@ -237,9 +237,16 @@ function Sleeve({
   showRecord = true,
   onSelect,
   reducedMotion,
+  objectRef,
 }) {
-  const group = useRef();
+  const localGroup = useRef();
+  const group = objectRef || localGroup;
   const record = useRef();
+  const initialTransform = useRef({
+    position: [...position],
+    rotation: [...rotation],
+    scale: visible ? scale : 0.001,
+  });
   const [hovered, setHovered] = useState(false);
   const cover = useCoverTexture(edition);
   useEffect(() => {
@@ -297,9 +304,9 @@ function Sleeve({
   return (
     <group
       ref={group}
-      position={position}
-      rotation={rotation}
-      scale={visible ? scale : 0.001}
+      position={initialTransform.current.position}
+      rotation={initialTransform.current.rotation}
+      scale={initialTransform.current.scale}
       onClick={(event) => {
         if (!visible || !interactive) return;
         event.stopPropagation();
@@ -314,6 +321,7 @@ function Sleeve({
     >
       <group
         ref={record}
+        name="sleeve-record"
         visible={showRecord}
         position={[0.43, 0, -0.065]}
         rotation={[Math.PI / 2, 0, 0]}
@@ -477,13 +485,32 @@ function Turntable({
   progress,
   paused,
   reducedMotion,
-  flight,
+  sourceSleeve,
 }) {
   const base = useRef();
   const disc = useRef();
+  const initialTransform = useRef({ position: [...position], scale });
   const elapsed = useRef(0);
   const [landed, setLanded] = useState(false);
   const wasPlaying = useRef(false);
+  const previousEdition = useRef(edition);
+  const flight = useMemo(
+    () => ({
+      point: new THREE.Vector3(),
+      target: new THREE.Vector3(),
+      scale: new THREE.Vector3(),
+      baseScale: new THREE.Vector3(),
+      rotation: new THREE.Quaternion(),
+      baseRotation: new THREE.Quaternion(),
+      upright: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        Math.PI / 2,
+      ),
+      flat: new THREE.Quaternion(),
+      landing: new THREE.Vector3(-0.35, 0.59, 0.05),
+    }),
+    [],
+  );
   const spindleMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -497,38 +524,74 @@ function Turntable({
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
     const speed = reducedMotion ? 1 : 1 - Math.exp(-dt * 5);
-    base.current.position.lerp(new THREE.Vector3(...position), speed);
+    base.current.position.lerp(flight.target.set(...position), speed);
     base.current.scale.setScalar(lerp(base.current.scale.x, scale, speed));
+    const editionChanged = edition !== previousEdition.current;
+    if (editionChanged) {
+      elapsed.current = playing ? -0.28 : 0;
+      previousEdition.current = edition;
+      setLanded(false);
+    }
     if (playing !== wasPlaying.current) {
-      elapsed.current = 0;
+      // Let the reading-view fade begin before the vinyl leaves its sleeve.
+      if (playing && elapsed.current <= 0) elapsed.current = -0.28;
       wasPlaying.current = playing;
       setLanded(false);
     }
-    if (!playing) return;
-    elapsed.current += dt;
-    const time = reducedMotion ? 1 : clamp(elapsed.current / 2, 0, 1);
+    elapsed.current = reducedMotion
+      ? playing
+        ? 2
+        : 0
+      : playing
+        ? Math.min(2, elapsed.current + dt)
+        : Math.max(0, elapsed.current - dt * 2.5);
+    const time = clamp(elapsed.current / 2, 0, 1);
     const extraction = clamp(time / 0.34, 0, 1);
     const travel = clamp((time - 0.34) / 0.66, 0, 1);
-    const eased = travel * travel * (3 - 2 * travel);
-    const start = flight || [-0.75, 0.95, -1.46];
-    const extractedX =
-      start[0] + 1.5 * (extraction * extraction * (3 - 2 * extraction));
-    disc.current.position.set(
-      lerp(extractedX, -0.35, eased),
-      lerp(start[1], 0.59, eased) + Math.sin(eased * Math.PI) * 0.48,
-      lerp(start[2], 0.05, eased),
+    const eased = THREE.MathUtils.smootherstep(travel, 0, 1);
+    const sleeve = sourceSleeve.current;
+    if (!sleeve) return;
+    const sleeveRecord = sleeve.getObjectByName("sleeve-record");
+    const movingRecordVisible = playing || time > 0;
+    disc.current.visible = movingRecordVisible;
+    if (sleeveRecord) sleeveRecord.visible = !movingRecordVisible;
+    if (!movingRecordVisible) return;
+
+    // Follow the sleeve while both it and the deck move into the reading view.
+    sleeve.updateWorldMatrix(true, false);
+    base.current.updateWorldMatrix(true, false);
+    const extractionEase = THREE.MathUtils.smootherstep(extraction, 0, 1);
+    flight.point.set(
+      (sleeveRecord?.position.x ?? 0.43) + 1.65 * extractionEase,
+      0,
+      -0.065,
     );
-    disc.current.rotation.x = lerp(Math.PI / 2, 0, eased);
-    disc.current.rotation.z = lerp(-0.12, 0, eased);
-    disc.current.scale.setScalar(lerp(0.8, 0.98, eased));
-    if (time === 1 && !landed) setLanded(true);
+    sleeve.localToWorld(flight.point);
+    base.current.worldToLocal(flight.point);
+    disc.current.position.copy(flight.point).lerp(flight.landing, eased);
+    disc.current.position.y += Math.sin(eased * Math.PI) * 0.48;
+
+    sleeve.getWorldQuaternion(flight.rotation);
+    base.current.getWorldQuaternion(flight.baseRotation).invert();
+    flight.rotation.premultiply(flight.baseRotation).multiply(flight.upright);
+    disc.current.quaternion.copy(flight.rotation).slerp(flight.flat, eased);
+    sleeve.getWorldScale(flight.scale);
+    base.current.getWorldScale(flight.baseScale);
+    disc.current.scale.setScalar(
+      lerp((flight.scale.x * 1.2) / flight.baseScale.x, 0.98, eased),
+    );
+    if (time === 1 && playing && !landed) setLanded(true);
   });
   const strobe = useMemo(
     () => Array.from({ length: 68 }, (_, index) => (index * Math.PI * 2) / 68),
     [],
   );
   return (
-    <group ref={base} position={position} scale={scale}>
+    <group
+      ref={base}
+      position={initialTransform.current.position}
+      scale={initialTransform.current.scale}
+    >
       {[-1.2, 1.2].map((x) =>
         [-0.89, 0.89].map((z) => (
           <mesh key={`${x}-${z}`} position={[x, 0.015, z]} castShadow>
@@ -681,11 +744,34 @@ function Turntable({
   );
 }
 
-function Stage({ mode, edition, onSelect, progress, paused, reducedMotion }) {
+function Stage({
+  mode,
+  edition,
+  onSelect,
+  progress,
+  paused,
+  reducedMotion,
+  presentation,
+}) {
   const { camera, size } = useThree();
   const isEdition = mode === "edition";
-  const compact = size.width / size.height < 1.3;
+  const [smallViewport, setSmallViewport] = useState(
+    () => window.innerWidth <= 760,
+  );
+  const introSleeve = useRef();
+  const aiSleeve = useRef();
+  const compact =
+    presentation === "immersive"
+      ? smallViewport
+      : size.width / size.height < 1.3;
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 760px)");
+    const update = () => setSmallViewport(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   useFrame((_, dt) => {
     const speed = reducedMotion ? 1 : 1 - Math.exp(-Math.min(dt, 0.05) * 5);
     const worldWidth = isEdition ? 4.6 : compact ? 5.65 : 10.7;
@@ -775,6 +861,7 @@ function Stage({ mode, edition, onSelect, progress, paused, reducedMotion }) {
       </mesh>
       <Sleeve
         edition="intro"
+        objectRef={introSleeve}
         position={introPosition}
         rotation={[-0.08, 0.1, -0.1]}
         scale={isEdition ? 0.72 : compact ? 0.77 : 1}
@@ -786,6 +873,7 @@ function Stage({ mode, edition, onSelect, progress, paused, reducedMotion }) {
       />
       <Sleeve
         edition="ai"
+        objectRef={aiSleeve}
         position={aiPosition}
         rotation={isEdition ? [-0.08, 0.1, -0.1] : [-0.09, -0.12, 0.08]}
         scale={isEdition ? 0.72 : compact ? 0.77 : 1}
@@ -809,7 +897,7 @@ function Stage({ mode, edition, onSelect, progress, paused, reducedMotion }) {
         progress={progress}
         paused={paused}
         reducedMotion={reducedMotion}
-        flight={[-0.74, 0.94, -1.47]}
+        sourceSleeve={edition === "ai" ? aiSleeve : introSleeve}
       />
     </>
   );
@@ -822,6 +910,7 @@ export default function RecordScene({
   progress = 0,
   paused = false,
   reducedMotion = false,
+  presentation = "stage",
 }) {
   return (
     <Canvas
@@ -850,6 +939,7 @@ export default function RecordScene({
           progress={progress}
           paused={paused}
           reducedMotion={reducedMotion}
+          presentation={presentation}
         />
       </Suspense>
     </Canvas>

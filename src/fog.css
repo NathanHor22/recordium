@@ -1,0 +1,32 @@
+.fog-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(125deg, #f1f1f3 0%, #d4d4de 48%, #e7e7ec 100%);
+}
+
+.fog-background__frame,
+.fog-background__effect {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.fog-background__frame {
+  display: block;
+}
+
+.fog-background__effect .vanta-canvas {
+  display: block;
+  pointer-events: none;
+}
+
+@media print {
+  .fog-background {
+    display: none;
+  }
+}

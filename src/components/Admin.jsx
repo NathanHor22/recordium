@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
-  ArrowUpRight,
+  Disc3,
   Check,
-  ChevronRight,
+  MoreHorizontal,
   Download,
   Mail,
   Search,
@@ -137,7 +136,7 @@ function ApplicantDetail({ application, confirmedCount, onClose }) {
               <dt>Profile</dt>
               <dd>
                 <a href={application.linkedin} target="_blank" rel="noreferrer">
-                  LinkedIn <ArrowUpRight size={13} />
+                  LinkedIn
                 </a>
               </dd>
             </div>
@@ -400,7 +399,7 @@ export default function Admin({ onClose }) {
           aria-label="Back to the collection"
           title="Back to the collection"
         >
-          <ArrowLeft size={17} />
+          <Disc3 size={17} />
           <span>Collection</span>
         </button>
         <span className="admin-brand">
@@ -555,7 +554,7 @@ export default function Admin({ onClose }) {
                       aria-label={`View application from ${application.name}`}
                       title="View application"
                     >
-                      <ChevronRight size={18} />
+                      <MoreHorizontal size={18} />
                     </button>
                   </td>
                 </tr>

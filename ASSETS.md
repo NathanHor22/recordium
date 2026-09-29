@@ -21,3 +21,11 @@ Two original bitmap artworks were generated with the built-in `image_gen` tool f
 > Use case: stylized-concept. Asset type: square album cover background art for a contemporary curated conversation record sleeve. Primary request: a black-and-white photocopied abstraction of several rough concentric circles and overlapping voice wave contours, like bold ripples cut from inked paper, coming together in a single round abstract form. Symbolize many voices, generations and perspectives sharing one room. Style: high-end experimental 1990s punk editorial art, tactile photocopy zine print, coarse halftone dots and distressed rough paper. Composition: flat square artwork edge to edge, artwork concentrated in lower half with a strong rough circular shape near lower center. Upper 45 percent mostly blank white paper to allow large typography overlay later in code. White paper background, deep black ink, limited gray halftone. It must feel like an art print, not a technical illustration or UI. Absolutely no text, letters, numbers, logos, watermark, photographs of people, identifiable objects, physical sleeve mockup, table or frame. No beige, no gradients, no light rays. Sharp contrast, intentional white negative space, premium tactile print.
 
 Generated files were copied from the tool's default generated-images directory into the project. The originals remain in place.
+
+## Supplied Alumni Portrait
+
+- File: `public/assets/andrew-tai.png`
+- Source: user-supplied `final-team-1.png`, copied without image manipulation.
+- Identity and role supplied by the user: Andrew Tai, Managing Director at Synapze.
+- Usage: portrait face of the interactive alumni record sleeve. CSS fits the original portrait into the square sleeve.
+- Profile link: `https://www.linkedin.com/in/andrewtaiwc/`, verified against the link on [Synapze's team page](https://www.synapzemy.com/about).

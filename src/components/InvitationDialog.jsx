@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { createApplication } from "../lib/applications";
 import "../admin.css";
 
@@ -231,7 +231,6 @@ export default function InvitationDialog({ onClose }) {
                 disabled={submitting}
               >
                 {submitting ? "Saving request..." : "Request an invitation"}
-                <ArrowUpRight size={19} />
               </button>
               <p className="invitation-demo">
                 Prototype: requests are saved on this device only. No email is

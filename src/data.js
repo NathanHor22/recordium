@@ -1,3 +1,14 @@
+export const alumni = [
+  {
+    id: "andrew-tai",
+    name: "Andrew Tai",
+    role: "Managing Director",
+    organisation: "Synapze",
+    portrait: "/assets/andrew-tai.png",
+    linkedin: "https://www.linkedin.com/in/andrewtaiwc/",
+  },
+];
+
 export const editions = {
   intro: {
     id: "intro",
