@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import BrandLogo from "./BrandLogo";
 import "../vinyl-loader.css";
@@ -11,14 +11,12 @@ const PHRASES = [
 ];
 
 // One continuous groove makes the colour travel from the label to the rim.
-const SPIRAL = Array.from({ length: 561 }, (_, index) => {
-  const fraction = index / 560;
-  const angle = fraction * Math.PI * 14 - Math.PI / 2;
-  const radius = 51 + fraction * 96;
+const SPIRAL = Array.from({ length: 1441 }, (_, index) => {
+  const fraction = index / 1440;
+  const angle = fraction * Math.PI * 24 - Math.PI / 2;
+  const radius = 52 + fraction * 93;
   return `${index ? "L" : "M"}${(160 + Math.cos(angle) * radius).toFixed(2)},${(160 + Math.sin(angle) * radius).toFixed(2)}`;
 }).join(" ");
-
-const GROOVES = Array.from({ length: 28 }, (_, index) => 54 + index * 3.4);
 
 export default function VinylLoader({
   progress = 0,
@@ -26,12 +24,58 @@ export default function VinylLoader({
   reducedMotion = false,
   getTarget,
   onContinue,
+  onFillComplete,
 }) {
+  const grooveId = useId();
+  const maskId = useId();
   const disc = useRef(null);
+  const colour = useRef(null);
+  const drawn = useRef({ value: 0 });
+  const fillComplete = useRef(onFillComplete);
+  fillComplete.current = onFillComplete;
   const targetGetter = useRef(getTarget);
   targetGetter.current = getTarget;
+  const readiness = Number.isFinite(progress)
+    ? Math.min(1, Math.max(0, progress))
+    : 0;
+
   useLayoutEffect(() => {
-    if (!exiting || reducedMotion || !disc.current) return;
+    const element = colour.current;
+    if (!element) return;
+    const destination = Math.max(drawn.current.value, readiness);
+    const render = () => {
+      element.style.strokeDashoffset = String(1 - drawn.current.value);
+      element.style.opacity = drawn.current.value > 0 ? "1" : "0";
+    };
+    const complete = () => {
+      if (destination === 1) fillComplete.current?.();
+    };
+    if (reducedMotion) {
+      drawn.current.value = destination;
+      render();
+      complete();
+      return;
+    }
+    const tween = gsap.to(drawn.current, {
+      value: destination,
+      duration: 0.7,
+      ease: "power2.out",
+      onUpdate: render,
+      onComplete: complete,
+    });
+    return () => tween.kill();
+  }, [readiness, reducedMotion]);
+
+  useLayoutEffect(() => {
+    if (!exiting) return;
+    // Complete the groove even when the fail-open timer outlasts a paused frame loop.
+    gsap.killTweensOf(drawn.current);
+    drawn.current.value = 1;
+    if (colour.current) {
+      colour.current.style.strokeDashoffset = "0";
+      colour.current.style.opacity = "1";
+    }
+    if (reducedMotion || !disc.current) return;
     const element = disc.current;
     let target = targetGetter.current?.();
     const bounds = element.getBoundingClientRect();
@@ -72,9 +116,6 @@ export default function VinylLoader({
     });
     return () => tween.kill();
   }, [exiting, reducedMotion]);
-  const readiness = Number.isFinite(progress)
-    ? Math.min(1, Math.max(0, progress))
-    : 0;
   const phraseIndex =
     readiness >= 1 ? 3 : readiness >= 0.62 ? 2 : readiness >= 0.28 ? 1 : 0;
 
@@ -92,6 +133,29 @@ export default function VinylLoader({
             viewBox="0 0 320 320"
             focusable="false"
           >
+            <defs>
+              <path id={grooveId} d={SPIRAL} pathLength="1" />
+              <mask
+                id={maskId}
+                maskUnits="userSpaceOnUse"
+                maskContentUnits="userSpaceOnUse"
+                x="0"
+                y="0"
+                width="320"
+                height="320"
+                style={{ maskType: "alpha" }}
+              >
+                <use
+                  className="vinyl-loader-track-mask"
+                  href={`#${grooveId}`}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="4.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </mask>
+            </defs>
             <circle className="vinyl-loader-rim" cx="160" cy="160" r="153" />
             <circle
               className="vinyl-loader-surface"
@@ -99,18 +163,15 @@ export default function VinylLoader({
               cy="160"
               r="149"
             />
-            <path
-              className="vinyl-loader-colour"
-              d={SPIRAL}
-              pathLength="1"
-              strokeDasharray="1"
-              strokeDashoffset={1 - readiness}
-              style={{ opacity: readiness > 0 ? 1 : 0 }}
-            />
-            <g className="vinyl-loader-grooves">
-              {GROOVES.map((radius) => (
-                <circle key={radius} cx="160" cy="160" r={radius} />
-              ))}
+            <use className="vinyl-loader-track" href={`#${grooveId}`} />
+            <use className="vinyl-loader-track-inner" href={`#${grooveId}`} />
+            <g mask={`url(#${maskId})`}>
+              <use
+                ref={colour}
+                className="vinyl-loader-colour"
+                href={`#${grooveId}`}
+                strokeDasharray="1 1"
+              />
             </g>
             <circle className="vinyl-loader-label" cx="160" cy="160" r="46" />
             <circle

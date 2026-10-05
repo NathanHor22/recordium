@@ -699,6 +699,7 @@ function Experience({ initialEdition }) {
           reducedMotion={reducedMotion}
           getTarget={() => introTarget.current?.()}
           onContinue={intro.canContinue ? intro.finish : undefined}
+          onFillComplete={intro.onFillComplete}
         />
       )}
     </div>

@@ -23,8 +23,10 @@ export default function useIntroLoading(sceneReady, reducedMotion) {
   const [minimumElapsed, setMinimumElapsed] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [fillReady, setFillReady] = useState(false);
   const [exiting, setExiting] = useState(false);
   const finish = useCallback(() => setCompleting(true), []);
+  const onFillComplete = useCallback(() => setFillReady(true), []);
 
   useEffect(() => {
     if (!visible) return;
@@ -60,19 +62,29 @@ export default function useIntroLoading(sceneReady, reducedMotion) {
   useEffect(() => {
     if (!completing) return;
     enteredCollection = true;
-    const fade = setTimeout(() => setExiting(true), reducedMotion ? 0 : 180);
-    const close = setTimeout(() => setVisible(false), reducedMotion ? 0 : 1200);
-    return () => {
-      clearTimeout(fade);
-      clearTimeout(close);
-    };
-  }, [completing, reducedMotion]);
+    // A paused rendering loop must not prevent entry after resources are ready.
+    const fallback = setTimeout(onFillComplete, reducedMotion ? 0 : 1000);
+    return () => clearTimeout(fallback);
+  }, [completing, reducedMotion, onFillComplete]);
+
+  useEffect(() => {
+    if (!completing || !fillReady) return;
+    const fade = setTimeout(() => setExiting(true), reducedMotion ? 0 : 120);
+    return () => clearTimeout(fade);
+  }, [completing, fillReady, reducedMotion]);
+
+  useEffect(() => {
+    if (!exiting) return;
+    const close = setTimeout(() => setVisible(false), reducedMotion ? 0 : 1020);
+    return () => clearTimeout(close);
+  }, [exiting, reducedMotion]);
 
   return {
     visible,
     exiting,
     canContinue,
     finish,
+    onFillComplete,
     progress: completing
       ? 1
       : Math.min(0.94, 0.08 + (loaded / 4) * 0.7 + (sceneReady ? 0.18 : 0)),
