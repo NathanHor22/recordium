@@ -141,7 +141,7 @@ async function heading(page, reduced = false) {
 
 function recordSwitch(page, id) {
   return page.locator(".room-record-switch").getByRole("button", {
-    name: id === "ai" ? /The work after AI/ : /The first conversation/,
+    name: id === "ai" ? /The work after AI/i : /Navigating Work in 2026/i,
   });
 }
 
@@ -159,11 +159,9 @@ async function editionReady(page, id) {
   await page.waitForTimeout(300);
 }
 
-async function gallery(page, scope, name, nested = false) {
+async function gallery(page, scope, name) {
   const group = page.locator(`${scope} .event-gallery`).first();
-  const images = group.locator(
-    nested ? ".event-gallery-photo img" : ".event-carousel-open > img",
-  );
+  const images = group.locator(".event-gallery-photo img");
   await expect(images).toHaveCount(4);
   expect(
     await images.evaluateAll((nodes) =>
@@ -179,25 +177,7 @@ async function gallery(page, scope, name, nested = false) {
       .toBeTruthy();
     expect(await image.getAttribute("alt")).toBeTruthy();
   }
-  if (!nested) {
-    const choices = group.locator(".event-carousel-thumbnails button");
-    await expect(choices).toHaveCount(4);
-    for (let index = 0; index < originals.length; index++) {
-      await choices.nth(index).click();
-      await expect(page.locator(scope)).toHaveAttribute(
-        "data-slide-index",
-        String(index),
-      );
-      await expect(choices.nth(index)).toHaveAttribute("aria-pressed", "true");
-      await expect(
-        group.locator(".event-carousel-open > img.is-active"),
-      ).toHaveAttribute("src", originals[index]);
-    }
-    await choices.first().click();
-  }
-  const trigger = group
-    .locator(nested ? ".event-gallery-open" : ".event-carousel-open")
-    .first();
+  const trigger = group.locator(".event-gallery-open").first();
   await trigger.click();
   const lightbox = page.locator("dialog.event-lightbox");
   await expect(lightbox).toHaveAttribute("open", "");
@@ -268,35 +248,173 @@ async function gallery(page, scope, name, nested = false) {
   await page.keyboard.press("Escape");
   await expect(lightbox).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  if (nested) {
-    await expect(page.locator(".listening-room")).toBeVisible();
-    await expect(page.locator(".listening-room")).not.toHaveClass(
-      /is-returning|is-closing/,
-    );
-  } else {
-    await expect(page.locator(scope)).toHaveAttribute("data-slide-index", "3");
-    await expect(
-      group.locator(".event-carousel-open > img.is-active"),
-    ).toHaveAttribute("src", originals[3]);
-  }
+  await expect(page.locator(".listening-room")).toBeVisible();
+  await expect(page.locator(".listening-room")).not.toHaveClass(
+    /is-returning|is-closing/,
+  );
   await noOverflow(page);
 }
 
-async function collectionRecord(page) {
-  await page.locator(".collection-portal").evaluate((element) => {
-    const top = element.getBoundingClientRect().top + scrollY;
+async function editionContent(page, id) {
+  const story = page.locator(".room-story");
+  if (id === "ai") {
+    await expect(story.locator(".story-intro > .upcoming-badge")).toHaveText(
+      "Upcoming conversation",
+    );
+    await expect(story).toContainText(/date and venue.*announced/i);
+    await expect(
+      story.locator(".track-section, .track, .event-gallery, blockquote, img"),
+    ).toHaveCount(0);
+    await expect(story).not.toContainText("QUESTIONS FOR THE ROOM");
+    await expect(
+      story.getByRole("button", { name: "Request an invitation", exact: true }),
+    ).toHaveCount(1);
+  } else {
+    await expect(story.locator("#room-title")).toHaveText(
+      /Navigating\s*Work in\s+2026\.?/i,
+    );
+    await expect(story.locator(".track")).toHaveCount(4);
+    await expect(story.locator(".event-gallery-photo img")).toHaveCount(4);
+    await expect(
+      story.getByRole("button", { name: "Request an invitation", exact: true }),
+    ).toHaveCount(0);
+    for (const track of await story.locator(".track").all()) {
+      const button = track.locator("button");
+      if ((await button.getAttribute("aria-expanded")) !== "true")
+        await button.click();
+      await expect(button).toHaveAttribute("aria-expanded", "true");
+      await expect(track.locator(".body-copy")).toBeVisible();
+      await button.click();
+      await expect(button).toHaveAttribute("aria-expanded", "false");
+      await expect(track.locator(".body-copy")).toBeHidden();
+    }
+  }
+}
+
+async function registration(page, label, scope = ".room-story") {
+  const surface = page.locator(
+    scope === ".room-story" ? ".listening-room" : ".public-content",
+  );
+  const request = page
+    .locator(scope)
+    .getByRole("button", { name: "Request an invitation", exact: true });
+  const before = await page.evaluate(() =>
+    localStorage.getItem("ftgg-applications-v1"),
+  );
+  await request.click();
+  const modal = page.locator(".registration-dialog");
+  await expect(modal).toHaveAttribute("open", "");
+  await expect(modal).toContainText("opening soon");
+  await expect(
+    modal.locator("form, input, textarea, select, a[href]"),
+  ).toHaveCount(0);
+  await expect(surface).toHaveAttribute("inert", "");
+  const close = modal.getByRole("button", {
+    name: "Close invitation details",
+    exact: true,
+  });
+  const back = modal.getByRole("button", {
+    name: "Back to browsing",
+    exact: true,
+  });
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(back).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await noOverflow(page);
+  await page.screenshot({ path: `${output}/${label}-registration.png` });
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(0);
+  await expect(request).toBeFocused();
+  await expect(surface).not.toHaveAttribute("inert");
+  expect(
+    await page.evaluate(() => localStorage.getItem("ftgg-applications-v1")),
+  ).toBe(before);
+}
+
+async function catalogue(page, originalCanvas, label) {
+  await page.locator(".collection-portal").evaluate((node) => {
+    const top = node.getBoundingClientRect().top + scrollY;
     scrollTo({
-      top: top + element.offsetHeight - innerHeight,
+      top: top + node.offsetHeight - innerHeight,
       behavior: "instant",
     });
   });
-  await page.waitForTimeout(850);
-  const record = page.getByRole("button", {
-    name: "Open The work after AI",
-    exact: true,
-  });
+  await page.waitForTimeout(1000);
+  expect(
+    await page.locator(".catalogue-caption").evaluateAll((nodes) =>
+      nodes.every((node) => {
+        const bounds = node.getBoundingClientRect();
+        return (
+          bounds.top >= -1 &&
+          bounds.bottom <= innerHeight + 1 &&
+          bounds.left >= -1 &&
+          bounds.right <= innerWidth + 1
+        );
+      }),
+    ),
+    "Both catalogue captions remain fully visible in the sticky viewport",
+  ).toBeTruthy();
+  const record = page.locator(".catalogue-record-ai");
   await expect(record).toBeInViewport();
-  return record;
+  await record.scrollIntoViewIfNeeded();
+  const originalScroll = await page.evaluate(() => scrollY);
+  const flight = page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const observer = new MutationObserver(() => {
+          const node = document.querySelector(".catalogue-transfer");
+          if (!node) return;
+          const bounds = node.getBoundingClientRect();
+          observer.disconnect();
+          clearTimeout(timer);
+          resolve({
+            width: bounds.width,
+            height: bounds.height,
+            cover: Boolean(node.querySelector(".catalogue-cover img")),
+          });
+        });
+        const timer = setTimeout(() => {
+          observer.disconnect();
+          resolve(null);
+        }, 3000);
+        observer.observe(document.body, { childList: true });
+      }),
+  );
+  await record.click();
+  const transfer = await flight;
+  expect(
+    transfer,
+    "The catalogue sleeve visibly transfers into the existing 3D scene",
+  ).not.toBeNull();
+  expect(transfer.width).toBeGreaterThan(50);
+  expect(transfer.height).toBeGreaterThan(50);
+  expect(transfer.cover).toBeTruthy();
+  await editionReady(page, "ai");
+  await paintedCanvas(page, originalCanvas);
+  await page.screenshot({ path: `${output}/${label}-catalogue-edition.png` });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".listening-room")).toHaveCount(0);
+  await expect(page.locator(".catalogue-transfer")).toHaveCount(0);
+  await expect(record).toBeFocused();
+  expect(
+    Math.abs((await page.evaluate(() => scrollY)) - originalScroll),
+  ).toBeLessThan(3);
+  expect(
+    await originalCanvas.evaluate((node) => node.isConnected),
+  ).toBeTruthy();
+  await record.click();
+  await page.waitForTimeout(90);
+  await page
+    .getByRole("button", { name: "Close edition", exact: true })
+    .click();
+  await expect(page.locator(".listening-room")).toHaveCount(0);
+  await expect(page.locator(".catalogue-transfer")).toHaveCount(0);
+  await expect(record).toBeFocused();
+  expect(
+    Math.abs((await page.evaluate(() => scrollY)) - originalScroll),
+  ).toBeLessThan(3);
 }
 
 try {
@@ -334,6 +452,19 @@ try {
       await ready(page);
       await heading(page);
       await expect(
+        page.locator(
+          ".public-content .event-gallery, .event-carousel, .event-story, .mobile-nav, .mobile-menu-button, .header-request",
+        ),
+      ).toHaveCount(0);
+      await expect(
+        page
+          .locator(".public-content")
+          .getByRole("button", { name: "Request an invitation", exact: true }),
+      ).toHaveCount(2);
+      await expect(page.locator("#home .hero-record-index button")).toHaveCount(
+        2,
+      );
+      await expect(
         page.getByRole("link", { name: "Curator workspace", exact: true }),
       ).toHaveCount(0);
       const canvas = await page.locator(".world-canvas canvas").elementHandle();
@@ -343,6 +474,7 @@ try {
       const heroAI = page.locator(".record-choice-ai");
       await heroAI.click();
       await editionReady(page, "ai");
+      await editionContent(page, "ai");
       await page.waitForTimeout(1600);
       const copy = await page.locator(".room-copy-arrival").elementHandle();
       await page.locator(".room-story").evaluate((element) => {
@@ -384,6 +516,7 @@ try {
       );
       await paintedCanvas(page, canvas);
       expect(page.url()).toBe(rootURL);
+      await registration(page, label);
       await page
         .getByRole("button", { name: "Copy conversation link", exact: true })
         .click();
@@ -400,7 +533,8 @@ try {
       await expect(page.locator(".listening-room")).toHaveCount(0);
       await expect(heroAI).toBeFocused();
 
-      const record = await collectionRecord(page);
+      const record = page.locator(".record-choice-intro");
+      await record.scrollIntoViewIfNeeded();
       const scroll = await page.evaluate(() => scrollY);
       await record.click();
       await page.waitForTimeout(90);
@@ -415,45 +549,16 @@ try {
       await expect(page.locator(".catalogue-transfer")).toHaveCount(0);
       await paintedCanvas(page, canvas);
       await record.click();
-      await editionReady(page, "ai");
-      await recordSwitch(page, "intro").click();
       await editionReady(page, "intro");
-      await gallery(page, ".listening-room", `${label}-edition`, true);
+      await editionContent(page, "intro");
+      await gallery(page, ".listening-room", `${label}-edition`);
       await page.keyboard.press("Escape");
       await expect(page.locator(".listening-room")).toHaveCount(0);
       await expect(record).toBeFocused();
-      await gallery(page, ".event-story", `${label}-public`);
 
-      if (viewport.width < 1000) {
-        await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
-        await page
-          .getByRole("button", { name: "Open navigation", exact: true })
-          .click();
-        const before = await page.evaluate(() =>
-          localStorage.getItem("ftgg-applications-v1"),
-        );
-        await page
-          .locator(".mobile-nav")
-          .getByRole("button", { name: "Request an invitation", exact: true })
-          .click();
-        const modal = page.locator(".registration-dialog");
-        await expect(modal).toHaveAttribute("open", "");
-        await expect(modal).toContainText("opening soon");
-        await expect(
-          modal.locator("form, input, textarea, select, a[href]"),
-        ).toHaveCount(0);
-        await expect(page.locator(".mobile-nav")).toHaveCount(0);
-        await noOverflow(page);
-        await page.screenshot({ path: `${output}/${label}-registration.png` });
-        await page.keyboard.press("Escape");
-        await expect(modal).toHaveCount(0);
-        await expect(page.locator(".header-request")).toBeFocused();
-        expect(
-          await page.evaluate(() =>
-            localStorage.getItem("ftgg-applications-v1"),
-          ),
-        ).toBe(before);
-      }
+      await catalogue(page, canvas, label);
+      await registration(page, `${label}-closing`, ".editorial-invitation");
+      await registration(page, `${label}-footer`, ".site-footer");
 
       await page.goto(shareURL);
       await ready(page);
@@ -481,7 +586,7 @@ try {
       await noOverflow(page);
       expect(errors).toEqual([]);
       results.push(
-        `${label}px: selection races, return, gallery, sharing, deep links and registration passed`,
+        `${label}px: hero/catalogue transitions, return, gallery, sharing, deep links and invitation entry points passed`,
       );
       console.log(results.at(-1));
     } catch (error) {

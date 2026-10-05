@@ -39,6 +39,31 @@ async function finished(page) {
   expect(await page.evaluate(() => document.body.style.overflow)).not.toBe(
     "hidden",
   );
+  const nav = page.getByRole("navigation", {
+    name: "Main navigation",
+    exact: true,
+  });
+  await expect(nav.getByRole("button")).toHaveCount(2);
+  await expect(
+    nav.getByRole("button", { name: "The collection", exact: true }),
+  ).toBeVisible();
+  await expect(
+    nav.getByRole("button", { name: "The alumni", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#home .hero-record-index button")).toHaveCount(2);
+  await expect(page.locator(".record-choice-intro")).toHaveText(
+    "Navigating Work in 2026",
+  );
+  await expect(
+    page.locator(
+      ".mobile-menu-button, .mobile-nav, .header-request, .event-story, .event-carousel",
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .locator(".public-content")
+      .getByRole("button", { name: "Request an invitation", exact: true }),
+  ).toHaveCount(2);
 }
 
 try {
@@ -178,9 +203,41 @@ try {
   await fallback.route("**/assets/art-*.png", (route) => route.abort());
   await loading(fallback);
   await finished(fallback);
+  await fallback.locator(".record-choice-ai").click();
+  await expect(fallback.locator(".listening-room")).toHaveAttribute(
+    "data-edition",
+    "ai",
+  );
+  await fallback
+    .getByRole("button", { name: "Close edition", exact: true })
+    .click();
+  await expect(fallback.locator(".listening-room")).toHaveCount(0, {
+    timeout: 16000,
+  });
+  await expect(fallback.locator(".record-choice-ai")).toBeFocused();
   await failed.close();
+
+  const missingScene = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const html = await missingScene.newPage();
+  await html.route(/RecordScene(?:\.jsx|-[^/]+\.js)/, (route) => route.abort());
+  await loading(html);
+  await finished(html);
+  await expect(html.locator(".record-fallback")).toBeVisible();
+  await html.locator(".record-choice-intro").click();
+  await expect(html.locator(".listening-room")).toHaveAttribute(
+    "data-edition",
+    "intro",
+  );
+  await expect(html.locator(".room-story .track")).toHaveCount(4);
+  await html.keyboard.press("Escape");
+  await expect(html.locator(".listening-room")).toHaveCount(0);
+  await expect(html.locator(".record-choice-intro")).toBeFocused();
+  await noOverflow(html);
+  await missingScene.close();
   console.log(
-    "Slow-renderer escape, landscape containment and failed artwork recovery passed.",
+    "Three failure paths passed: slow-renderer escape, failed artwork and missing scene module; HTML record controls remain usable.",
   );
 } finally {
   await browser.close();

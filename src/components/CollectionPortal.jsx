@@ -2,16 +2,18 @@ import { useLayoutEffect, useRef } from "react";
 import { Disc3 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { editions } from "../data";
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function CollectionPortal({ onSelect, reducedMotion }) {
+export default function CollectionPortal({ onSelect, reducedMotion = false }) {
   const root = useRef(null);
   const title = useRef(null);
   const reveal = useRef(null);
   const progress = useRef(null);
   useLayoutEffect(() => {
     if (reducedMotion) return;
+    let active = true;
     const context = gsap.context(() => {
       const timeline = gsap.timeline({
         scrollTrigger: {
@@ -69,9 +71,12 @@ export default function CollectionPortal({ onSelect, reducedMotion }) {
       });
     }, root);
     document.fonts.ready.then(() => {
-      if (root.current) ScrollTrigger.refresh();
+      if (active && root.current) ScrollTrigger.refresh();
     });
-    return () => context.revert();
+    return () => {
+      active = false;
+      context.revert();
+    };
   }, [reducedMotion]);
   return (
     <section
@@ -102,13 +107,14 @@ export default function CollectionPortal({ onSelect, reducedMotion }) {
           <div className="collection-sleeves">
             <button
               className="catalogue-record catalogue-record-intro"
+              type="button"
               onClick={() => onSelect("intro")}
-              aria-label="Open The first conversation"
+              aria-label={`Open ${editions.intro.title}`}
             >
               <div className="catalogue-object">
                 <span className="catalogue-vinyl">
                   <span>
-                    <Disc3 size={40} />
+                    <Disc3 size={40} aria-hidden="true" />
                   </span>
                 </span>
                 <div className="catalogue-cover">
@@ -117,31 +123,32 @@ export default function CollectionPortal({ onSelect, reducedMotion }) {
                     FTGG - 001 <span>SYNAPZE / 2026</span>
                   </span>
                   <span className="catalogue-cover-title">
-                    CONVERSATIONS
+                    NAVIGATING
                     <br />
-                    FOR THE
+                    WORK
                     <br />
-                    GREATER GOOD
+                    IN 2026
                   </span>
                   <span className="catalogue-bottomline mono">
-                    THE FIRST CONVERSATION
+                    EDUCATION. AI. HUMAN CONNECTION.
                   </span>
                 </div>
               </div>
               <div className="catalogue-caption">
-                <h3>The first conversation</h3>
-                <p>Navigating work in 2026</p>
+                <h3>{editions.intro.title}</h3>
+                <p>{editions.intro.subtitle}</p>
               </div>
             </button>
             <button
               className="catalogue-record catalogue-record-ai"
+              type="button"
               onClick={() => onSelect("ai")}
-              aria-label="Open The work after AI"
+              aria-label={`Open ${editions.ai.title}`}
             >
               <div className="catalogue-object">
                 <span className="catalogue-vinyl">
                   <span>
-                    <Disc3 size={40} />
+                    <Disc3 size={40} aria-hidden="true" />
                   </span>
                 </span>
                 <div className="catalogue-cover">
@@ -161,10 +168,8 @@ export default function CollectionPortal({ onSelect, reducedMotion }) {
               </div>
               <div className="catalogue-caption">
                 <span className="upcoming-badge">Upcoming</span>
-                <h3>The work after AI</h3>
-                <p>
-                  What happens when intelligence becomes part of the workforce?
-                </p>
+                <h3>{editions.ai.title}</h3>
+                <p>{editions.ai.introduction}</p>
               </div>
             </button>
           </div>

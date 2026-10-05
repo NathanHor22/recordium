@@ -15,29 +15,35 @@ export const editions = {
     number: "001",
     catalogue: "FTGG-001",
     status: "In the collection",
-    title: "The first conversation",
-    coverTitle: "Conversations for the Greater Good",
-    subtitle: "Navigating work in 2026",
+    title: "Navigating Work in 2026",
+    coverTitle: "Navigating Work in 2026",
+    subtitle: "Education, AI, and the human side of work.",
     location: "Synapze office",
     question: "What's the thing university students are struggling with today?",
     introduction:
-      "The first conversation began with Jordan, a student about to graduate. Around the table were graduates, solopreneurs, business owners and senior professionals, each bringing a different experience of work.",
+      "At Synapze, the conversation began with a question for Jordan, a student about to graduate. Students, graduates, solopreneurs, business owners and senior professionals shared their experiences of learning, employment and building a business as AI changes how work gets done.",
     tracks: [
       {
-        title: "Entering the workforce",
+        title: "Learning for the work ahead",
+        question: "How do we assess learning when AI is part of the process?",
+        text: "The discussion explored students' uncertainty about effort, fairness and AI-assisted assignments. It raised questions about assessing how work is developed, making learning more participatory, and preparing graduates for workplaces where AI tools are already in use.",
+      },
+      {
+        title: "What good work looks like",
+        question: "When the tools move faster, who stands behind the result?",
+        text: "Participants shared examples of AI speeding up everyday tasks, alongside questions about checking its output and taking responsibility for decisions. The conversation returned to quality, judgement, taste and communication, and to the relationships that give work its context.",
+      },
+      {
+        title: "Beyond the generation gap",
         question:
-          "What happens when the world of work moves faster than the way we prepare for it?",
-        text: "Students using AI to compete. Universities rethinking assessment. Employers looking at the quality of the work. We explored the distance between education and working life.",
+          "Is work ethic a generational issue, or a question of how people are prepared?",
+        text: "Concerns about initiative and urgency met challenges to the idea that a whole generation shares one work ethic. The room considered education, expectations and opportunities to develop independence, without arriving at a single explanation for how people approach work.",
       },
       {
-        title: "What work asks of us",
-        question: "When machines can do the execution, what do we bring?",
-        text: "Thinking, judgement, communication and connection. The conversation moved beyond tools to the human abilities that give work its value.",
-      },
-      {
-        title: "Finding our way together",
-        question: "How do we build a working life with other people in it?",
-        text: "Neurodiversity, mentorship, apprenticeships and entrepreneurship. And what happens when more of our working lives are spent alone with a laptop.",
+        title: "Learning through people",
+        question:
+          "How do we develop talent without leaving people on their own?",
+        text: "Mentorship, apprenticeships and community offered starting points for learning through real work. Participants also discussed work-based assessments for neurodivergent candidates, the demands of entrepreneurship, and the value of human connection when more working lives are spent alone with a laptop.",
       },
     ],
     participants: [
@@ -95,26 +101,8 @@ export const editions = {
     location: "Date and venue to be announced",
     question: "What happens when intelligence becomes part of the workforce?",
     introduction:
-      "A small, curated conversation about the work, decisions and organisations we build as AI becomes part of everyday execution. Bring the questions you are still working through.",
-    tracks: [
-      {
-        title: "The work",
-        question:
-          "What work are we still doing because our systems have not caught up?",
-        text: "An opening question about the work itself, the processes behind it, and what deserves to change.",
-      },
-      {
-        title: "The intelligence",
-        question: "Where does organisational intelligence actually live?",
-        text: "In systems, in people, and in the spaces between them. What changes when that knowledge can begin to perform work?",
-      },
-      {
-        title: "The organisation",
-        question:
-          "How do we organise people when machines can do more of the execution?",
-        text: "A conversation about judgement, responsibility and the shape of the organisation that comes next.",
-      },
-    ],
+      "A small, curated conversation about how AI is reshaping everyday work, judgement and responsibility.",
+    tracks: [],
     participants: [],
     photos: [],
     linkedinPost: null,

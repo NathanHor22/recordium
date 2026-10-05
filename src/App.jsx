@@ -8,14 +8,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { Check, Disc3, Menu, Share2, X } from "lucide-react";
+import { Check, Disc3, Share2, X } from "lucide-react";
 import gsap from "gsap";
 import { alumni, editions } from "./data";
 import FogBackground from "./components/FogBackground";
 import CollectionPortal from "./components/CollectionPortal";
 import AlumniCollection from "./components/AlumniCollection";
 import EditionContent from "./components/EditionContent";
-import StoryStatement, { ConversationStory } from "./components/StoryStatement";
+import StoryStatement from "./components/StoryStatement";
 import SeriesPrelude from "./components/SeriesPrelude";
 import RegistrationDialog from "./components/RegistrationDialog";
 import BrandLogo from "./components/BrandLogo";
@@ -52,19 +52,7 @@ class SceneBoundary extends Component {
   }
 }
 
-function Header({ onRequest, onNavigate }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  useEffect(() => {
-    const escape = (event) => {
-      if (event.key === "Escape") setMenuOpen(false);
-    };
-    window.addEventListener("keydown", escape);
-    return () => window.removeEventListener("keydown", escape);
-  }, []);
-  const navigate = (id) => {
-    setMenuOpen(false);
-    onNavigate(id);
-  };
+function Header({ onNavigate }) {
   return (
     <header className="site-header">
       <a
@@ -73,48 +61,16 @@ function Header({ onRequest, onNavigate }) {
         aria-label="For the Greater Good home"
         onClick={(event) => {
           event.preventDefault();
-          navigate("home");
+          onNavigate("home");
         }}
       >
         <BrandLogo className="header-logo" />
         <BrandLogo compact className="header-logo-compact" />
       </a>
       <nav className="desktop-nav" aria-label="Main navigation">
-        <button onClick={() => navigate("collection")}>The collection</button>
-        <button onClick={() => navigate("alumni")}>The alumni</button>
-        <button onClick={() => navigate("series")}>The series</button>
+        <button onClick={() => onNavigate("collection")}>The collection</button>
+        <button onClick={() => onNavigate("alumni")}>The alumni</button>
       </nav>
-      <div className="header-actions">
-        <button
-          className="button button-dark header-request"
-          onClick={onRequest}
-        >
-          Request an invitation
-        </button>
-        <button
-          className="icon-button mobile-menu-button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </button>
-      </div>
-      {menuOpen && (
-        <nav className="mobile-nav" aria-label="Mobile navigation">
-          <button onClick={() => navigate("collection")}>The collection</button>
-          <button onClick={() => navigate("alumni")}>The alumni</button>
-          <button onClick={() => navigate("series")}>The series</button>
-          <button
-            onClick={() => {
-              setMenuOpen(false);
-              onRequest();
-            }}
-          >
-            Request an invitation
-          </button>
-        </nav>
-      )}
     </header>
   );
 }
@@ -286,9 +242,7 @@ function ListeningRoom({
               aria-pressed={item.id === requestedEdition}
               onClick={() => onSelect(item.id)}
             >
-              {item.id === "intro"
-                ? "The first conversation"
-                : "The work after AI"}
+              {item.title}
               {item.id === "ai" && (
                 <span className="upcoming-badge">Upcoming</span>
               )}
@@ -353,7 +307,7 @@ function Experience({ initialEdition }) {
     } else if (previous.invitation && !invitation) {
       target = invitationTrigger.current?.isConnected
         ? invitationTrigger.current
-        : document.querySelector(".header-request") || selectionTrigger.current;
+        : document.querySelector(".room-close") || selectionTrigger.current;
     }
     if (!target) return;
     // Restore only after React has removed inert from the triggering surface.
@@ -604,7 +558,7 @@ function Experience({ initialEdition }) {
         >
           Skip to content
         </a>
-        <Header onRequest={openInvitation} onNavigate={navigate} />
+        <Header onNavigate={navigate} />
         <main id="main-content" tabIndex={-1}>
           <section
             id="home"
@@ -635,13 +589,13 @@ function Experience({ initialEdition }) {
                 className="record-choice record-choice-intro"
                 onClick={() => selectEdition("intro")}
               >
-                The first conversation
+                {editions.intro.title}
               </button>
               <button
                 className="record-choice record-choice-ai"
                 onClick={() => selectEdition("ai")}
               >
-                The work after AI{" "}
+                {editions.ai.title}{" "}
                 <span className="upcoming-badge">Upcoming</span>
               </button>
             </div>
@@ -659,12 +613,10 @@ function Experience({ initialEdition }) {
             onSelect={selectEdition}
             reducedMotion={reducedMotion}
           />
-          <ConversationStory onSelect={selectEdition} />
           <AlumniCollection people={alumni} />
           <StoryStatement
             reducedMotion={reducedMotion}
             onRequest={openInvitation}
-            onSelect={selectEdition}
           />
         </main>
         <footer className="site-footer">

@@ -100,12 +100,12 @@ function coverArtwork(ctx, edition, artwork) {
     ctx.font = "600 24px Arial, sans-serif";
     ctx.fillText("UPCOMING", 71, 552);
   } else {
-    ctx.font = '400 98px Anton, Impact, "Arial Narrow", sans-serif';
-    ctx.fillText("CONVERSATIONS", 47, 128, 930);
-    ctx.font = '400 155px Anton, Impact, "Arial Narrow", sans-serif';
-    ctx.fillText("FOR THE", 44, 229, 895);
-    ctx.fillText("GREATER", 44, 379, 930);
-    ctx.fillText("GOOD", 44, 529, 830);
+    ctx.font = '400 125px Anton, Impact, "Arial Narrow", sans-serif';
+    ctx.fillText("NAVIGATING", 47, 128, 930);
+    ctx.font = '400 185px Anton, Impact, "Arial Narrow", sans-serif';
+    ctx.fillText("WORK", 44, 257, 930);
+    ctx.font = '400 172px Anton, Impact, "Arial Narrow", sans-serif';
+    ctx.fillText("IN 2026", 44, 442, 930);
   }
 
   ctx.fillStyle = BLACK;
@@ -113,7 +113,9 @@ function coverArtwork(ctx, edition, artwork) {
   ctx.fillStyle = ai ? LIME : PAPER;
   ctx.font = "500 23px Arial, sans-serif";
   ctx.fillText(
-    ai ? "WHAT COMES AFTER THE WAY WE WORK?" : "THE FIRST CONVERSATION",
+    ai
+      ? "WHAT COMES AFTER THE WAY WE WORK?"
+      : "EDUCATION. AI. HUMAN CONNECTION.",
     53,
     962,
   );
@@ -169,9 +171,18 @@ function makeLabel(edition) {
     ctx.textAlign = "center";
     ctx.font = "700 38px Arial, sans-serif";
     ctx.fillText("FOR THE GREATER GOOD", 512, 250);
-    ctx.font = '900 116px Impact, "Arial Narrow", sans-serif';
-    ctx.fillText(edition === "ai" ? "THE WORK" : "THE FIRST", 512, 370);
-    ctx.fillText(edition === "ai" ? "AFTER AI" : "CONVERSATION", 512, 476, 790);
+    if (edition === "ai") {
+      ctx.font = '900 116px Impact, "Arial Narrow", sans-serif';
+      ctx.fillText("THE WORK", 512, 370);
+      ctx.fillText("AFTER AI", 512, 476, 790);
+    } else {
+      ctx.font = '900 92px Impact, "Arial Narrow", sans-serif';
+      ctx.fillText("NAVIGATING", 512, 365, 800);
+      ctx.font = '900 118px Impact, "Arial Narrow", sans-serif';
+      ctx.fillText("WORK", 512, 482, 790);
+      ctx.font = '900 104px Impact, "Arial Narrow", sans-serif';
+      ctx.fillText("IN 2026", 512, 620, 790);
+    }
     ctx.font = "500 30px Arial, sans-serif";
     ctx.fillText("PEOPLE. PERSPECTIVES. POSSIBILITY.", 512, 720);
     ctx.font = "500 28px Arial, sans-serif";

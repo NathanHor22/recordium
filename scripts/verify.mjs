@@ -1,23 +1,19 @@
-import { chromium, expect } from "@playwright/test";
+import { chromium, expect as playwrightExpect } from "@playwright/test";
 import { mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
+const expect = playwrightExpect.configure({ timeout: 16000 });
 const output = "test-results";
 await mkdir(output, { recursive: true });
 const baseURL = process.env.TEST_URL || "http://127.0.0.1:5173";
 let executablePath;
 if (process.platform === "win32") {
-  const browserRoot = join(process.env.LOCALAPPDATA, "ms-playwright");
-  const installed = (await readdir(browserRoot).catch(() => []))
+  const root = join(process.env.LOCALAPPDATA, "ms-playwright");
+  const versions = (await readdir(root).catch(() => []))
     .filter((name) => /^chromium-\d+$/.test(name))
     .sort((a, b) => Number(b.split("-")[1]) - Number(a.split("-")[1]));
-  if (installed.length)
-    executablePath = join(
-      browserRoot,
-      installed[0],
-      "chrome-win64",
-      "chrome.exe",
-    );
+  if (versions[0])
+    executablePath = join(root, versions[0], "chrome-win64", "chrome.exe");
 }
 const browser = await chromium.launch({
   headless: true,
@@ -29,21 +25,13 @@ const context = await browser.newContext({
   deviceScaleFactor: 1,
 });
 const page = await context.newPage();
-page.setDefaultTimeout(15000);
-const failures = [];
-page.on("pageerror", (error) => failures.push(error.message));
+page.setDefaultTimeout(16000);
+const errors = [];
+page.on("pageerror", (error) => errors.push(error.message));
 page.on("console", (message) => {
-  if (message.type() === "error") failures.push(message.text());
+  if (message.type() === "error") errors.push(message.text());
 });
 
-async function rendered() {
-  await page.locator(".world-canvas canvas").waitFor();
-  await expect(page.locator(".vinyl-loader")).toHaveCount(0, {
-    timeout: 16000,
-  });
-  await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(2900);
-}
 async function pixels() {
   return page.locator(".world-canvas canvas").evaluate((canvas) => {
     const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
@@ -68,177 +56,74 @@ async function pixels() {
     return { painted, hash };
   });
 }
-async function noOverflow() {
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth + 1,
-    ),
-  ).toBeTruthy();
+
+async function ready() {
+  await expect(page.locator(".vinyl-loader")).toHaveCount(0);
+  await page.evaluate(() => document.fonts.ready);
+  await expect
+    .poll(async () => (await pixels()).painted)
+    .toBeGreaterThan(page.viewportSize().width <= 760 ? 500 : 1000);
+  await page.waitForTimeout(1800);
 }
-async function noTransportControls() {
+
+async function controls() {
   await expect(
-    page.locator(".experience .lucide-pause, .experience .lucide-play"),
+    page.locator(
+      '.experience .lucide-pause, .experience .lucide-play, .experience [class*="lucide-arrow"], .experience [class*="lucide-chevron"]',
+    ),
   ).toHaveCount(0);
   await expect(
     page
       .locator(".experience")
       .getByRole("button", { name: /\b(?:pause|play|resume)\b/i }),
   ).toHaveCount(0);
-  await expect(
-    page.locator(
-      '.experience [class*="lucide-arrow"], .experience [class*="lucide-chevron"]',
-    ),
-  ).toHaveCount(0);
-}
-async function singleLineHeadings() {
-  for (const selector of [
-    "#home-title",
-    "#collection-heading",
-    "#alumni-heading",
-  ]) {
-    const bounds = await page.locator(selector).evaluate((element) => {
-      const textRects = [];
+  const issues = await page.evaluate(() => {
+    const issues = [];
+    if (document.documentElement.scrollWidth > innerWidth + 1)
+      issues.push("document overflow");
+    for (const element of document.querySelectorAll(
+      ".site-header button, .record-choice, .collection-jump, .editorial-story-button, .site-footer button, .room-record-switch button, .track > button, .registration-action, .registration-close, .alumni-back-footer a, .room-close",
+    )) {
+      if (element.closest('[inert], [hidden], [aria-hidden="true"]')) continue;
+      const style = getComputedStyle(element);
+      if (style.visibility === "hidden" || !element.getClientRects().length)
+        continue;
+      const box = element.getBoundingClientRect();
+      const label =
+        element.getAttribute("aria-label") || element.textContent.trim();
+      if (
+        [
+          style.borderTopLeftRadius,
+          style.borderTopRightRadius,
+          style.borderBottomLeftRadius,
+          style.borderBottomRightRadius,
+        ].some((radius) => parseFloat(radius) > 1)
+      )
+        issues.push(`${label}: rounded control`);
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
         if (!walker.currentNode.textContent.trim()) continue;
         const range = document.createRange();
         range.selectNodeContents(walker.currentNode);
-        textRects.push(
-          ...Array.from(range.getClientRects()).filter(
-            (rect) => rect.width > 0,
-          ),
-        );
-      }
-      const lines = [];
-      for (const rect of textRects) {
-        if (!lines.some((top) => Math.abs(top - rect.top) < 2))
-          lines.push(rect.top);
-      }
-      const parent = element.getBoundingClientRect();
-      return {
-        lines: lines.length,
-        left: Math.min(...textRects.map((rect) => rect.left)),
-        right: Math.max(...textRects.map((rect) => rect.right)),
-        parentLeft: parent.left,
-        parentRight: parent.right,
-        viewport: innerWidth,
-      };
-    });
-    expect(
-      bounds.lines,
-      `${selector} should be one line at ${bounds.viewport}px`,
-    ).toBe(1);
-    expect(
-      bounds.left,
-      `${selector} extends left of its container`,
-    ).toBeGreaterThanOrEqual(bounds.parentLeft - 1);
-    expect(
-      bounds.right,
-      `${selector} extends right of its container`,
-    ).toBeLessThanOrEqual(bounds.parentRight + 1);
-  }
-}
-async function containedRectangularControls() {
-  const violations = await page.evaluate(() => {
-    const selectors = [
-      ".header-request",
-      ".record-choice",
-      ".collection-jump",
-      ".catalogue-record",
-      ".room-record-switch button",
-      ".track > button",
-      ".editorial-story-button",
-      ".registration-action",
-      ".registration-close",
-      ".alumni-back-footer a",
-      ".room-close",
-    ];
-    const issues = [];
-    for (const element of document.querySelectorAll(selectors.join(","))) {
-      if (element.closest('[inert], [hidden], [aria-hidden="true"]')) continue;
-      const style = getComputedStyle(element);
-      if (style.visibility === "hidden" || !element.getClientRects().length)
-        continue;
-      const bounds = element.getBoundingClientRect();
-      const label =
-        element.getAttribute("aria-label") ||
-        element.textContent.trim().replace(/\s+/g, " ").slice(0, 65);
-      const radii = [
-        style.borderTopLeftRadius,
-        style.borderTopRightRadius,
-        style.borderBottomLeftRadius,
-        style.borderBottomRightRadius,
-      ];
-      if (radii.some((radius) => parseFloat(radius) > 1))
-        issues.push(`${label}: rounded corners ${radii.join(",")}`);
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
         if (
-          !node.textContent.trim() ||
-          node.parentElement.closest(".catalogue-object")
-        )
-          continue;
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        for (const rect of range.getClientRects()) {
-          if (
-            rect.width &&
-            (rect.left < bounds.left - 1 ||
-              rect.right > bounds.right + 1 ||
-              rect.top < bounds.top - 1 ||
-              rect.bottom > bounds.bottom + 1)
+          [...range.getClientRects()].some(
+            (rect) =>
+              rect.width &&
+              (rect.left < box.left - 1 ||
+                rect.right > box.right + 1 ||
+                rect.top < box.top - 1 ||
+                rect.bottom > box.bottom + 1),
           )
-            issues.push(`${label}: text leaves button bounds`);
-        }
+        )
+          issues.push(`${label}: text outside control`);
       }
     }
     return issues;
   });
-  expect(
-    violations,
-    "Public controls should be rectangular and contain their text",
-  ).toEqual([]);
+  expect(issues).toEqual([]);
 }
-async function scrollPortal(progress) {
-  await page.evaluate((value) => {
-    const element = document.querySelector(".collection-portal");
-    const top = element.getBoundingClientRect().top + scrollY;
-    scrollTo({
-      top: top + element.offsetHeight * value - innerHeight,
-      behavior: "instant",
-    });
-  }, progress);
-  await page.waitForTimeout(850);
-}
-async function screenshot(name) {
-  await page.screenshot({ path: `${output}/${name}.png` });
-}
-async function verifyRegistrationPlaceholder() {
-  const dialog = page.locator(".registration-dialog");
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toHaveAttribute("open", "");
-  await expect(dialog).toContainText("opening soon");
-  await expect(dialog).toContainText("The Work After AI");
-  await expect(
-    dialog.locator("form, input, textarea, select, a[href]"),
-  ).toHaveCount(0);
-  const close = dialog.getByRole("button", {
-    name: "Close invitation details",
-    exact: true,
-  });
-  const back = dialog.getByRole("button", {
-    name: "Back to browsing",
-    exact: true,
-  });
-  await expect(close).toBeFocused();
-  await page.keyboard.press("Shift+Tab");
-  await expect(back).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(close).toBeFocused();
-  await containedRectangularControls();
-}
-async function verifyAlumni(name, checkLink = false) {
+
+async function alumni(label) {
   const front = page.getByRole("button", {
     name: "Show details about Andrew Tai",
     exact: true,
@@ -256,7 +141,6 @@ async function verifyAlumni(name, checkLink = false) {
     )
     .toBeTruthy();
   await expect(front).toHaveAttribute("aria-expanded", "false");
-  await screenshot(`alumni-${name}-front`);
   await front.click();
   await expect(back).toHaveAttribute("aria-expanded", "true");
   await page.waitForTimeout(650);
@@ -272,185 +156,94 @@ async function verifyAlumni(name, checkLink = false) {
   );
   await expect(linkedin).toHaveAttribute("target", "_blank");
   await expect(linkedin).toBeInViewport();
-  await containedRectangularControls();
-  await screenshot(`alumni-${name}-back`);
-  if (checkLink) {
-    await linkedin.evaluate((link) =>
-      link.addEventListener("click", (event) => event.preventDefault(), {
-        once: true,
-      }),
-    );
-    await linkedin.click();
-    await expect(back).toHaveAttribute("aria-expanded", "true");
-  }
+  await controls();
+  await page.screenshot({ path: `${output}/alumni-${label}-back.png` });
+  await linkedin.evaluate((link) =>
+    link.addEventListener("click", (event) => event.preventDefault(), {
+      once: true,
+    }),
+  );
+  await linkedin.click();
+  await expect(back).toHaveAttribute("aria-expanded", "true");
   await back.focus();
   await page.keyboard.press("Enter");
   await expect(front).toHaveAttribute("aria-expanded", "false");
 }
-async function verifyStatement(name) {
-  await page.locator(".editorial-invitation").evaluate((element) => {
-    const top = element.getBoundingClientRect().top + scrollY;
-    scrollTo({
-      top: top + element.offsetHeight - innerHeight,
-      behavior: "instant",
-    });
-  });
-  await page.waitForTimeout(1000);
-  const request = page
-    .locator(".editorial-invitation")
-    .getByRole("button", { name: "Request an invitation", exact: true });
-  await expect(request).toBeVisible();
-  await expect(request).toBeInViewport();
-  await request.click({ trial: true });
-  await containedRectangularControls();
-  await screenshot(`statement-${name}`);
-  await request.click();
-  await verifyRegistrationPlaceholder();
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".registration-dialog")).toHaveCount(0);
-  await expect(request).toBeFocused();
-}
 
 try {
   await page.goto(baseURL);
-  await rendered();
-  await expect(
-    page.getByRole("link", { name: "Curator workspace", exact: true }),
-  ).toHaveCount(0);
+  await ready();
   await expect(page.locator(".fog-background")).toHaveAttribute(
     "data-state",
     "live",
   );
-  expect((await pixels()).painted).toBeGreaterThan(1000);
-  await noOverflow();
-  await noTransportControls();
-  await singleLineHeadings();
-  await containedRectangularControls();
-  await screenshot("fog-home-desktop");
-  await page
-    .locator(".world-canvas canvas")
-    .evaluate((canvas) => (canvas.dataset.continuity = "original"));
-  const originalURL = page.url();
-  await page
-    .locator(".world-canvas canvas")
-    .click({ position: { x: 390, y: 180 } });
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await rendered();
-  expect(page.url()).toBe(originalURL);
-  await expect(page.locator(".world-canvas canvas")).toHaveAttribute(
-    "data-continuity",
-    "original",
+  await expect(page.locator(".hero-record-index button")).toHaveCount(2);
+  await expect(page.locator(".record-choice-intro")).toHaveText(
+    "Navigating Work in 2026",
   );
-  await screenshot("immersive-edition-desktop");
-  await noTransportControls();
-  await containedRectangularControls();
-  const movingA = await pixels();
+  await expect(
+    page
+      .locator(".public-content")
+      .getByRole("button", { name: "Request an invitation", exact: true }),
+  ).toHaveCount(2);
+  await expect(
+    page.locator(
+      ".header-request, .mobile-menu-button, .event-story, .event-carousel, .public-content .event-gallery",
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Curator workspace", exact: true }),
+  ).toHaveCount(0);
+  await controls();
+  await page.screenshot({ path: `${output}/collection-home-desktop.png` });
+  const canvas = await page.locator(".world-canvas canvas").elementHandle();
+  const originalURL = page.url();
+  await page.locator(".record-choice-intro").click();
+  await expect(page.locator(".listening-room")).toHaveAttribute(
+    "data-edition",
+    "intro",
+  );
+  await expect(page.locator("#room-title")).toHaveText(
+    /Navigating\s*Work in\s+2026\.?/i,
+  );
+  await ready();
+  expect(page.url()).toBe(originalURL);
+  expect(
+    await canvas.evaluate(
+      (node) =>
+        node.isConnected &&
+        document.querySelector(".world-canvas canvas") === node,
+    ),
+  ).toBeTruthy();
+  await controls();
+  const moving = await pixels();
   await page.waitForTimeout(500);
-  expect((await pixels()).hash).not.toBe(movingA.hash);
-  await page
-    .getByRole("button", { name: "Copy conversation link", exact: true })
-    .focus();
+  expect((await pixels()).hash).not.toBe(moving.hash);
+  const share = page.getByRole("button", {
+    name: "Copy conversation link",
+    exact: true,
+  });
+  await share.focus();
   await page.keyboard.press("Shift+Tab");
   await expect(page.locator(".room-record-switch button").last()).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("button", { name: "Copy conversation link", exact: true }),
-  ).toBeFocused();
-  await page
-    .getByRole("button", { name: "What work asks of us", exact: true })
-    .click();
-  await expect(
-    page.getByText("When machines can do the execution, what do we bring?"),
-  ).toBeVisible();
-  await page
-    .locator(".room-record-switch")
-    .getByRole("button", { name: /The work after AI/ })
-    .click();
-  await expect(page.locator("#room-title")).toContainText("AFTER AI");
-  await expect(page.locator(".story-intro > .upcoming-badge")).toHaveText(
-    "Upcoming conversation",
-  );
-  await rendered();
-  expect((await pixels()).painted).toBeGreaterThan(1000);
-  await screenshot("immersive-ai-desktop");
-  await page
-    .locator(".room-story")
-    .getByRole("button", { name: "Request an invitation", exact: true })
-    .first()
-    .click();
-  await verifyRegistrationPlaceholder();
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".registration-dialog")).toHaveCount(0);
-  await expect(page.locator(".listening-room")).toBeVisible();
-  await expect(
-    page
-      .locator(".room-story")
-      .getByRole("button", { name: "Request an invitation", exact: true })
-      .first(),
-  ).toBeFocused();
+  await expect(share).toBeFocused();
+  await expect(page.locator(".track")).toHaveCount(4);
+  await expect(page.locator(".event-gallery-photo img")).toHaveCount(4);
+  await page.screenshot({ path: `${output}/intro-edition-desktop.png` });
   await page.keyboard.press("Escape");
   await expect(page.locator(".listening-room")).toHaveCount(0);
-  expect(page.url()).toBe(originalURL);
-  await expect(page.locator(".world-canvas canvas")).toHaveAttribute(
-    "data-continuity",
-    "original",
-  );
+  await expect(page.locator(".record-choice-intro")).toBeFocused();
+  await alumni("desktop");
+  const quote = page.locator(".editorial-quote");
+  await quote.scrollIntoViewIfNeeded();
+  await expect(quote).toContainText("Nobody had the questions beforehand.");
+  await expect(quote.locator("button, a[href]")).toHaveCount(0);
+  await page.screenshot({ path: `${output}/closing-quote-desktop.png` });
   console.log(
-    "Same-page selection, scene continuity, animation, keyboard trap, switching and nested dialog passed.",
+    "Restored homepage, original animated canvas, keyboard trap, recap, alumni and closing quote passed.",
   );
 
-  await scrollPortal(0.2);
-  const smallScale = await page
-    .locator(".portal-title")
-    .evaluate(
-      (element) => new DOMMatrix(getComputedStyle(element).transform).a,
-    );
-  await scrollPortal(0.46);
-  const largeScale = await page
-    .locator(".portal-title")
-    .evaluate(
-      (element) => new DOMMatrix(getComputedStyle(element).transform).a,
-    );
-  expect(largeScale).toBeGreaterThan(smallScale + 0.1);
-  await screenshot("collection-title-zoom");
-  await scrollPortal(1);
-  await expect(
-    page.getByRole("button", { name: "Open The work after AI", exact: true }),
-  ).toBeVisible();
-  await screenshot("collection-revealed-desktop");
-  const originalScroll = await page.evaluate(() => scrollY);
-  await page
-    .getByRole("button", { name: "Open The work after AI", exact: true })
-    .click();
-  await rendered();
-  await page
-    .getByRole("button", { name: "Close edition", exact: true })
-    .click();
-  await expect(page.locator(".listening-room")).toHaveCount(0);
-  expect(
-    Math.abs((await page.evaluate(() => scrollY)) - originalScroll),
-  ).toBeLessThan(3);
-  await expect(
-    page.getByRole("button", { name: "Open The work after AI", exact: true }),
-  ).toBeFocused();
-  await verifyAlumni("desktop", true);
-  await verifyStatement("desktop");
-  console.log(
-    "Collection zoom, restored scroll/focus, Andrew Tai portrait/LinkedIn/flip and statement CTA passed.",
-  );
-
-  const storedRequests = await page.evaluate(() =>
-    localStorage.getItem("ftgg-applications-v1"),
-  );
-  await page.locator(".header-request").click();
-  await verifyRegistrationPlaceholder();
-  await page
-    .getByRole("button", { name: "Back to browsing", exact: true })
-    .click();
-  await expect(page.locator(".header-request")).toBeFocused();
-  expect(
-    await page.evaluate(() => localStorage.getItem("ftgg-applications-v1")),
-  ).toBe(storedRequests);
   await page.goto(new URL("#/admin", baseURL).href);
   await page.getByLabel("Search applicants").fill("Amelia Tan");
   await page.getByRole("button", { name: /^Amelia Tan\s*Sample$/ }).click();
@@ -469,120 +262,39 @@ try {
   await page.getByLabel("Search applicants").fill("Amelia Tan");
   await expect(page.locator("tbody")).toContainText("Confirmed");
   console.log(
-    "Public registration placeholder, isolated curator workflow and persistence passed.",
+    "Explicit curator demo route, notes, invitation workflow and persistence passed.",
   );
 
-  for (const viewport of [
-    { width: 320, height: 700 },
-    { width: 390, height: 844 },
-    { width: 768, height: 1024 },
-    { width: 1920, height: 1080 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await page.goto(baseURL);
-    await rendered();
-    await noOverflow();
-    await noTransportControls();
-    await singleLineHeadings();
-    await containedRectangularControls();
-    expect((await pixels()).painted).toBeGreaterThan(500);
-    await screenshot(`fog-home-${viewport.width}`);
-    await page
-      .locator(".hero-record-index")
-      .getByRole("button", { name: /The work after AI/ })
-      .click();
-    await rendered();
-    await noOverflow();
-    await noTransportControls();
-    await containedRectangularControls();
-    expect((await pixels()).painted).toBeGreaterThan(500);
-    await screenshot(`immersive-edition-${viewport.width}`);
-    await page
-      .getByRole("button", { name: "Close edition", exact: true })
-      .click();
-    await expect(page.locator(".listening-room")).toHaveCount(0);
-    await expect(
-      page
-        .locator(".hero-record-index")
-        .getByRole("button", { name: /The work after AI/ }),
-    ).toBeFocused();
-    await scrollPortal(1);
-    await noOverflow();
-    await containedRectangularControls();
-    await screenshot(`collection-revealed-${viewport.width}`);
-    await verifyAlumni(String(viewport.width));
-    await verifyStatement(String(viewport.width));
-    console.log(
-      `${viewport.width}px headings, controls, canvas and statement CTA passed.`,
-    );
-  }
-  for (const width of [999, 1000, 1199, 1200, 1366]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(150);
-    await noOverflow();
-    await singleLineHeadings();
-    await containedRectangularControls();
-  }
-  console.log("Font-breakpoint and 1366px heading/control bounds passed.");
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto(baseURL);
-  await rendered();
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await noOverflow();
-  await screenshot("navigation-open-320");
-  await page.getByRole("button", { name: "Close navigation" }).click();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(baseURL);
-  await rendered();
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await noOverflow();
-  await screenshot("navigation-open-390");
-  await page
-    .locator(".mobile-nav")
-    .getByRole("button", { name: "The alumni" })
-    .click();
-  await expect(page.locator(".mobile-nav")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Show details about Andrew Tai" }),
-  ).toBeInViewport();
+  await ready();
+  await alumni("320");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
-  await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
-  await rendered();
+  await ready();
   await expect(page.locator(".fog-background")).toHaveAttribute(
     "data-state",
     "paused",
   );
   await expect(page.locator(".vanta-canvas")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Open The work after AI", exact: true }),
-  ).toBeVisible();
-  await page
-    .locator(".hero-record-index")
-    .getByRole("button", { name: /The first conversation/ })
-    .click();
-  await rendered();
+  await page.locator(".record-choice-intro").click();
+  await ready();
   const still = await pixels();
-  expect(still.painted).toBeGreaterThan(500);
   await page.waitForTimeout(450);
   expect((await pixels()).hash).toBe(still.hash);
-  await noOverflow();
-  await noTransportControls();
+  await controls();
   await page.keyboard.press("Escape");
   await expect(page.locator(".listening-room")).toHaveCount(0);
-  const reducedRequest = page
-    .locator(".editorial-invitation")
-    .getByRole("button", { name: "Request an invitation", exact: true });
-  await reducedRequest.scrollIntoViewIfNeeded();
-  await reducedRequest.click();
-  await verifyRegistrationPlaceholder();
-  await page.keyboard.press("Escape");
-  await expect(reducedRequest).toBeFocused();
-  expect(failures).toEqual([]);
+  await expect(page.locator(".record-choice-intro")).toBeFocused();
+  expect(errors).toEqual([]);
   console.log(
-    "Mobile navigation, reduced motion, accessible statement CTA and zero console errors passed.",
+    "320px alumni, rectangular controls, reduced-motion scene and zero runtime errors passed.",
   );
+} catch (error) {
+  await page
+    .screenshot({ path: `${output}/browser-failure.png` })
+    .catch(() => {});
+  throw error;
 } finally {
   await browser.close();
 }

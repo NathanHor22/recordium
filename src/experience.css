@@ -123,8 +123,9 @@
   text-decoration: none;
 }
 .experience .desktop-nav {
+  display: flex;
   gap: 10px;
-  margin-right: 10px;
+  margin-right: 0;
 }
 .desktop-nav > button {
   border: 1px solid #17181630;
@@ -964,7 +965,7 @@
 }
 @media (max-width: 1000px) {
   .experience .desktop-nav {
-    display: none;
+    display: flex;
   }
   .experience .mobile-menu-button {
     display: inline-flex;
@@ -1053,7 +1054,7 @@
   .hero-record-index .record-choice {
     flex: 1;
     min-width: 0;
-    min-height: 72px;
+    min-height: 80px;
     font-size: 15px;
     padding: 12px;
     gap: 8px;
@@ -1222,6 +1223,14 @@
   }
 }
 @media (max-width: 540px) {
+  .experience .desktop-nav {
+    gap: 8px;
+  }
+  .desktop-nav > button {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
   .experience .hero-heading h1 {
     font-size: 38px;
   }
